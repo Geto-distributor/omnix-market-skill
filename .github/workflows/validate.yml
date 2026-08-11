@@ -1,0 +1,48 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  skill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate Skill metadata
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          text = Path("SKILL.md").read_text(encoding="utf-8")
+          match = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+          if not match:
+              raise SystemExit("SKILL.md frontmatter is missing")
+          fields = {}
+          for line in match.group(1).splitlines():
+              key, value = line.split(":", 1)
+              fields[key.strip()] = value.strip()
+          if set(fields) != {"name", "description"}:
+              raise SystemExit("frontmatter must contain only name and description")
+          if fields["name"] != "omnix-market":
+              raise SystemExit("unexpected skill name")
+          if not fields["description"]:
+              raise SystemExit("description is required")
+          PY
+      - name: Validate Python client
+        run: |
+          python -m py_compile scripts/omnix_market.py
+          python scripts/omnix_market.py --help >/dev/null
+      - name: Reject committed credentials
+        run: |
+          if git grep -nE 'omx_(test|live)_[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}'; then
+            echo "Potential credential found"
+            exit 1
+          fi
