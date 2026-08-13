@@ -2,14 +2,14 @@
 
 ## 顺序
 
-1. Company 与 CompanyRole/LegalEntity identity；先 `companies:resolve`。CommercialAccount 以一个市场内一家公司一个账户的规则内嵌，不使用独立 CRUD。
-2. Product、Project/Opportunity；Project 先 `projects:resolve`。Opportunity 与 Project 一一对应并内嵌，不使用独立 CRUD。
+1. Company 与 CompanyRole/LegalEntity identity；先 `companies:resolve`。把 CommercialAccount 作为 Company 在该市场的商业账户信息保存。
+2. Product、Project/Opportunity；Project 先 `projects:resolve`。把 Opportunity 作为 Project 的商业机会信息保存。
 3. ProjectParticipant、ProjectProduct、Relationship。
 4. Assessment 与 AssessmentDimension。
 5. Source、Claim、ClaimSourceLink。
 6. Contact、CustomsEvidence、FinancialRecord。
-7. owner-scoped list + `contentStatus=Draft` 回读稳定 draft/resource keys。
-8. 当前 OpenAPI 暴露时执行 `drafts:validate`，再对同一 subject 的 draft keys 做显式 submit。
+7. 使用对象 list + `contentStatus=Draft` 回读当前用户的稳定 draft/resource keys。
+8. 执行批量草稿校验，再对同一 subject 的 draft keys 做显式 submit。
 
 实际 endpoint、method、query 和 DTO 始终从当前 OpenAPI 读取；此顺序不授权调用缺失接口。
 

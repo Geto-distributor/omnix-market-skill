@@ -12,7 +12,7 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = json.loads((ROOT / "tests/fixtures/agent-rest-candidate.json").read_text(encoding="utf-8"))
+SPEC = json.loads((ROOT / "tests/fixtures/agent-rest-openapi.json").read_text(encoding="utf-8"))
 
 
 def load_client():
@@ -60,6 +60,18 @@ def args(method: str, path: str, body: str | None = None, **overrides):
 
 
 class OpenApiContractTests(unittest.TestCase):
+    def test_runtime_docs_do_not_embed_release_history(self) -> None:
+        forbidden = (
+            "未合并 PR", "测试环境尚未", "当前服务端 main", "MCP", "ETag", "If-Match",
+            "17 个只读", "59 个", "60 个",
+        )
+        documents = [ROOT / "SKILL.md", *sorted((ROOT / "references").glob("*.md"))]
+        for document in documents:
+            text = document.read_text(encoding="utf-8")
+            for phrase in forbidden:
+                with self.subTest(document=document.name, phrase=phrase):
+                    self.assertNotIn(phrase, text)
+
     def test_capability_surface_excludes_owner_draft_list_and_approvals(self) -> None:
         operations = CLIENT.available_operations(SPEC)
         paths = {(item["method"], item["path"]) for item in operations}

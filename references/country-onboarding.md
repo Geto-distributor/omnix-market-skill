@@ -16,12 +16,12 @@
 4. 对每个 Project/Opportunity 调用 `projects:resolve`，再写 Project、Participant、Product 和 Relationship。关系分别记录合作方式、对手方角色、采购方、实际使用方、付款方、地点和时间窗口。
 5. 写 Source、Claim、ClaimSourceLink；再写 Contact、CustomsEvidence、FinancialRecord。Provider 数据必须带 sourceKeys、queryBoundary、retrievedOn，不把 provider unavailable 当作 not_found。
 6. 公司背调完成后，按 [lead-value-scoring.md](lead-value-scoring.md) 写 Assessment 与六个 Dimension。
-7. 使用各对象 list + `contentStatus=Draft` owner-scoped 回读，校验 resourceKey、draftKey、warnings 和关系闭包；不新增 Owner Draft List。
-8. 若实时 OpenAPI 暴露 `drafts:validate`，调用一次提交前批量预校验；未暴露时标记 blocked capability，不猜路径。
+7. 使用各对象 list + `contentStatus=Draft` 回读当前用户草稿，校验 resourceKey、draftKey、warnings 和关系闭包。
+8. 调用 OpenAPI 中的批量草稿校验 operation；不可用时停在私人草稿并报告能力缺口。
 9. 默认停在私人草稿。只有用户明确要求“提交审核”时才调用 `drafts:submit`。Approve/Reject 和发布由 Web UI 完成。
 
 不写 ResearchRun。研究范围、检查点和 ResearchDelta 由上层 GETO Skills 维护，OmniX Market 只接收稳定业务实体与证据。
 
 ## 完成判定
 
-一次新国家拓客的候选 API 写入面应具备：主体去重、公司与项目、参与方/产品/关系、证据链、联系人/海关/财务、当前六维评分、私人草稿回读、批量预校验和显式提交。每项只有出现在实时 OpenAPI 后才算可用；初始化、人工审核和发布是人为治理步骤，不属于 API Key 自动执行范围。
+一次完整交付包括：主体去重、公司与项目、参与方/产品/关系、证据链、联系人/海关/财务、六维评分、私人草稿回读、批量预校验和显式提交。初始化、人工审核和发布由 Web 治理流程完成。

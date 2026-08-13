@@ -12,8 +12,6 @@
 
 本仓库不执行市场初始化、最终发布、Approve、Reject、审批队列或 ResearchRun；这些仍由 OmniX Web 治理流程或上层研究编排负责。
 
-集成只使用 Agent REST，不包含 MCP。当前服务端 main、未合并候选 PR 与建议新增能力的区分见 [合同成熟度基线](references/contract-status.md)；测试环境未上线前不声称真实写入测试已通过。
-
 ## 安装
 
 ~~~bash
