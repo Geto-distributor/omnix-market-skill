@@ -12,6 +12,8 @@
 
 本仓库不执行市场初始化、最终发布、Approve、Reject、审批队列或 ResearchRun；这些仍由 OmniX Web 治理流程或上层研究编排负责。
 
+集成只使用 Agent REST，不包含 MCP。当前服务端 main、未合并候选 PR 与建议新增能力的区分见 [合同成熟度基线](references/contract-status.md)；测试环境未上线前不声称真实写入测试已通过。
+
 ## 安装
 
 ~~~bash
@@ -37,6 +39,7 @@ API Key 必须由 OmniX 部署方签发。不要把真实 Key 写入仓库、Pro
 python3 scripts/omnix_market.py --help
 python3 scripts/omnix_market.py capabilities
 python3 scripts/omnix_market.py request GET '/api/market-intelligence/v1/reference-data'
+python3 -m unittest discover -s tests -v
 ~~~
 
 先阅读 [SKILL.md](SKILL.md)。实际 endpoint、method、DTO、枚举和评分版本始终以当前 OmniX OpenAPI 与 reference-data 为准。

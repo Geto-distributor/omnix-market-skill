@@ -106,15 +106,220 @@ def resolve_operation(spec: dict[str, Any], method: str, concrete_path: str) -> 
     return matches[0]
 
 
-def read_body(path: str | None) -> bytes | None:
-    if path is None:
+def resolve_pointer(document: dict[str, Any], reference: str) -> Any:
+    if not reference.startswith("#/"):
+        raise ValueError(f"only local OpenAPI references are supported: {reference}")
+    value: Any = document
+    for token in reference[2:].split("/"):
+        token = token.replace("~1", "/").replace("~0", "~")
+        if not isinstance(value, dict) or token not in value:
+            raise ValueError(f"OpenAPI reference does not resolve: {reference}")
+        value = value[token]
+    return value
+
+
+def resolve_object(spec: dict[str, Any], value: Any) -> Any:
+    seen: set[str] = set()
+    while isinstance(value, dict) and isinstance(value.get("$ref"), str):
+        reference = value["$ref"]
+        if reference in seen:
+            raise ValueError(f"cyclic OpenAPI reference: {reference}")
+        seen.add(reference)
+        value = resolve_pointer(spec, reference)
+    return value
+
+
+def operation_definition(spec: dict[str, Any], template: str, method: str) -> dict[str, Any]:
+    path_item = spec["paths"].get(template)
+    operation = path_item.get(method.lower()) if isinstance(path_item, dict) else None
+    if not isinstance(operation, dict):
+        raise ValueError("matched OpenAPI operation has no definition")
+    return operation
+
+
+def request_schema(spec: dict[str, Any], operation: dict[str, Any]) -> dict[str, Any] | None:
+    request_body = resolve_object(spec, operation.get("requestBody"))
+    if not isinstance(request_body, dict):
         return None
+    content = request_body.get("content")
+    if not isinstance(content, dict):
+        return None
+    media = content.get("application/json")
+    if not isinstance(media, dict):
+        media = next(
+            (value for key, value in content.items() if key.endswith("+json") and isinstance(value, dict)),
+            None,
+        )
+    schema = media.get("schema") if isinstance(media, dict) else None
+    return schema if isinstance(schema, dict) else None
+
+
+def response_schema(
+    spec: dict[str, Any], operation: dict[str, Any], status: int
+) -> dict[str, Any] | None:
+    responses = operation.get("responses")
+    if not isinstance(responses, dict):
+        return None
+    response = responses.get(str(status))
+    if response is None:
+        response = responses.get(f"{status // 100}XX", responses.get("default"))
+    response = resolve_object(spec, response)
+    if not isinstance(response, dict):
+        return None
+    content = response.get("content")
+    if not isinstance(content, dict):
+        return None
+    media = content.get("application/json")
+    if not isinstance(media, dict):
+        media = next(
+            (value for key, value in content.items() if key.endswith("+json") and isinstance(value, dict)),
+            None,
+        )
+    schema = media.get("schema") if isinstance(media, dict) else None
+    return schema if isinstance(schema, dict) else None
+
+
+def json_type_matches(value: Any, expected: str) -> bool:
+    return {
+        "object": isinstance(value, dict),
+        "array": isinstance(value, list),
+        "string": isinstance(value, str),
+        "integer": isinstance(value, int) and not isinstance(value, bool),
+        "number": isinstance(value, (int, float)) and not isinstance(value, bool),
+        "boolean": isinstance(value, bool),
+        "null": value is None,
+    }.get(expected, True)
+
+
+def validate_json_schema(
+    value: Any,
+    schema: dict[str, Any],
+    spec: dict[str, Any],
+    location: str = "$",
+    depth: int = 0,
+) -> list[str]:
+    if depth > 32:
+        return [f"{location}: OpenAPI schema nesting exceeds 32 levels"]
+    schema = resolve_object(spec, schema)
+    if not isinstance(schema, dict):
+        return []
+    if value is None and schema.get("nullable") is True:
+        return []
+    errors: list[str] = []
+    for branch in schema.get("allOf", []) if isinstance(schema.get("allOf"), list) else []:
+        if isinstance(branch, dict):
+            errors.extend(validate_json_schema(value, branch, spec, location, depth + 1))
+    for keyword in ("oneOf", "anyOf"):
+        branches = schema.get(keyword)
+        if isinstance(branches, list) and branches:
+            branch_errors = [
+                validate_json_schema(value, branch, spec, location, depth + 1)
+                for branch in branches if isinstance(branch, dict)
+            ]
+            matches = sum(not item for item in branch_errors)
+            if (keyword == "oneOf" and matches != 1) or (keyword == "anyOf" and matches == 0):
+                errors.append(f"{location}: value does not satisfy OpenAPI {keyword}")
+            return errors
+    expected = schema.get("type")
+    if isinstance(expected, list):
+        valid_type = any(isinstance(item, str) and json_type_matches(value, item) for item in expected)
+    elif isinstance(expected, str):
+        valid_type = json_type_matches(value, expected)
+    else:
+        valid_type = True
+    if not valid_type:
+        return [f"{location}: expected OpenAPI type {expected}"]
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{location}: value is not in OpenAPI enum {schema['enum']}")
+    if "const" in schema and value != schema["const"]:
+        errors.append(f"{location}: value does not equal OpenAPI const")
+    if isinstance(value, dict):
+        properties = schema.get("properties", {})
+        properties = properties if isinstance(properties, dict) else {}
+        required = schema.get("required", [])
+        for name in required if isinstance(required, list) else []:
+            if name not in value:
+                errors.append(f"{location}.{name}: required by OpenAPI")
+        if schema.get("additionalProperties") is False:
+            for name in value.keys() - properties.keys():
+                errors.append(f"{location}.{name}: property is not allowed by OpenAPI")
+        for name, child in value.items():
+            child_schema = properties.get(name)
+            if isinstance(child_schema, dict):
+                errors.extend(
+                    validate_json_schema(child, child_schema, spec, f"{location}.{name}", depth + 1)
+                )
+    if isinstance(value, list):
+        minimum = schema.get("minItems")
+        maximum = schema.get("maxItems")
+        if isinstance(minimum, int) and len(value) < minimum:
+            errors.append(f"{location}: requires at least {minimum} item(s)")
+        if isinstance(maximum, int) and len(value) > maximum:
+            errors.append(f"{location}: allows at most {maximum} item(s)")
+        items = schema.get("items")
+        if isinstance(items, dict):
+            for index, child in enumerate(value):
+                errors.extend(validate_json_schema(child, items, spec, f"{location}[{index}]", depth + 1))
+    if isinstance(value, str):
+        if isinstance(schema.get("minLength"), int) and len(value) < schema["minLength"]:
+            errors.append(f"{location}: shorter than OpenAPI minLength")
+        if isinstance(schema.get("maxLength"), int) and len(value) > schema["maxLength"]:
+            errors.append(f"{location}: longer than OpenAPI maxLength")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(schema.get("minimum"), (int, float)) and value < schema["minimum"]:
+            errors.append(f"{location}: below OpenAPI minimum")
+        if isinstance(schema.get("maximum"), (int, float)) and value > schema["maximum"]:
+            errors.append(f"{location}: above OpenAPI maximum")
+    return errors
+
+
+def operation_parameters(
+    spec: dict[str, Any], template: str, operation: dict[str, Any]
+) -> list[dict[str, Any]]:
+    path_item = spec["paths"].get(template)
+    values: list[Any] = []
+    if isinstance(path_item, dict) and isinstance(path_item.get("parameters"), list):
+        values.extend(path_item["parameters"])
+    if isinstance(operation.get("parameters"), list):
+        values.extend(operation["parameters"])
+    return [value for item in values if isinstance((value := resolve_object(spec, item)), dict)]
+
+
+def validate_query(
+    spec: dict[str, Any], template: str, operation: dict[str, Any], query: str
+) -> list[str]:
+    query_values = urllib.parse.parse_qs(query, keep_blank_values=True)
+    parameters = {
+        item.get("name"): item
+        for item in operation_parameters(spec, template, operation)
+        if item.get("in") == "query" and isinstance(item.get("name"), str)
+    }
+    errors: list[str] = []
+    for name in query_values.keys() - parameters.keys():
+        errors.append(f"query parameter is not declared by OpenAPI: {name}")
+    for name, parameter in parameters.items():
+        if parameter.get("required") is True and name not in query_values:
+            errors.append(f"required OpenAPI query parameter is missing: {name}")
+        schema = resolve_object(spec, parameter.get("schema"))
+        enum = schema.get("enum") if isinstance(schema, dict) else None
+        if isinstance(enum, list):
+            allowed = {str(item) for item in enum}
+            for value in query_values.get(str(name), []):
+                if value not in allowed:
+                    errors.append(f"query parameter {name} is not in OpenAPI enum {enum}")
+    return errors
+
+
+def read_body(path: str | None) -> tuple[Any | None, bytes | None]:
+    if path is None:
+        return None, None
     if path == "-":
         raw = sys.stdin.read()
     else:
         raw = Path(path).read_text(encoding="utf-8")
     value = json.loads(raw)
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    data = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return value, data
 
 
 def command_capabilities(_: argparse.Namespace) -> int:
@@ -134,26 +339,32 @@ def command_request(args: argparse.Namespace) -> int:
         raise ValueError("path must be an absolute-path reference, not a URL")
     spec = load_openapi(spec_url)
     template = resolve_operation(spec, method, parsed_path.path)
+    operation = operation_definition(spec, template, method)
+    query_errors = validate_query(spec, template, operation, parsed_path.query)
+    if query_errors:
+        raise ValueError("; ".join(query_errors))
     is_submit = template.endswith("drafts:submit")
-    is_resolve = template.endswith(":resolve")
-    if method == "POST" and not is_submit and not is_resolve and not args.idempotency_key:
+    is_validate = template.endswith("drafts:validate")
+    is_draft_post = method == "POST" and "/drafts" in template.lower()
+    if is_draft_post and not is_submit and not is_validate and not args.idempotency_key:
         raise ValueError("draft create POST requires --idempotency-key")
-    if method in {"PUT", "DELETE"} and not args.if_match:
-        raise ValueError(f"{method} requires --if-match with the current owner draft ETag")
     if method == "DELETE" and not args.confirm_delete:
         raise ValueError("DELETE requires --confirm-delete after explicit user intent")
     if is_submit and not args.confirm_submit:
         raise ValueError("draft submit requires --confirm-submit after explicit user intent")
-    data = read_body(args.body)
+    body, data = read_body(args.body)
     if method in {"POST", "PUT"} and data is None:
         raise ValueError(f"{method} requires --body")
+    schema = request_schema(spec, operation)
+    if body is not None and schema is not None:
+        schema_errors = validate_json_schema(body, schema, spec)
+        if schema_errors:
+            raise ValueError("request body violates OpenAPI schema: " + "; ".join(schema_errors))
     headers = {"Accept": "application/json", "X-API-KEY": key}
     if data is not None:
         headers["Content-Type"] = "application/json"
     if args.idempotency_key:
         headers["Idempotency-Key"] = args.idempotency_key
-    if args.if_match:
-        headers["If-Match"] = args.if_match
     url = f"{base}{args.path}"
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
@@ -164,16 +375,19 @@ def command_request(args: argparse.Namespace) -> int:
         return 1
     with response:
         raw = response.read().decode("utf-8", errors="replace")
+        body = parse_body(raw)
+        schema = response_schema(spec, operation, response.status)
+        response_errors = validate_json_schema(body, schema, spec) if schema is not None else []
         result = {
             "provider": "omnix-market",
-            "providerStatus": "available",
+            "providerStatus": "failed" if response_errors else "available",
             "httpStatus": response.status,
-            "etag": response.headers.get("ETag"),
             "retryAfter": response.headers.get("Retry-After"),
-            "body": parse_body(raw),
+            "body": body,
+            "responseValidationErrors": response_errors,
         }
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0
+    return 1 if response_errors else 0
 
 
 def parse_body(raw: str) -> Any:
@@ -203,7 +417,6 @@ def build_parser() -> argparse.ArgumentParser:
     request.add_argument("path")
     request.add_argument("--body", help="JSON file path, or - for stdin")
     request.add_argument("--idempotency-key")
-    request.add_argument("--if-match")
     request.add_argument("--confirm-delete", action="store_true")
     request.add_argument("--confirm-submit", action="store_true")
     request.add_argument("--timeout", type=float, default=30)

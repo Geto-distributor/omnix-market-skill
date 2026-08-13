@@ -40,6 +40,7 @@ jobs:
         run: |
           python -m py_compile scripts/omnix_market.py
           python scripts/omnix_market.py --help >/dev/null
+          python -m unittest discover -s tests -v
       - name: Reject committed credentials
         run: |
           if git grep -nE 'omx_(test|live)_[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}'; then

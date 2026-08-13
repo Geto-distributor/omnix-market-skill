@@ -1,6 +1,6 @@
 # GETO 客户价值六维评分
 
-先从 `reference-data.currentAssessmentModels` 选择 `modelCode=GETO_LEAD_VALUE` 的当前 `modelVersion`，不得自行猜版本。只有公司背调达到可评分条件时写分；证据不足且无有效 peer prior 的维度标为未评分，不能用 0 代替未知。
+单公司 Assessment 只能由 `$geto-diligence-company` 在 `assessmentMode=lead_value` 时生产；`$geto-find-leads` 只聚合排序。先从 `reference-data.currentAssessmentModels` 选择 `modelCode=GETO_LEAD_VALUE` 的当前已批准 `modelVersion`，不得自行猜版本。只有公司背调达到可评分条件时写逐维判断；证据不足的维度标为未评分，不能用 0 代替未知。
 
 正式评分还必须传 `capabilityFoundation`：`status` 必须为 `available`，并保存本次实际使用的 `contentHash`、`productCodes`、`scenarioCodes`、`caseKeys`、`sourceKeys`。partial/unavailable 时不写正式评分。
 
@@ -25,10 +25,10 @@
 - `rationale`、`claimKeys`、`sourceKeys`：可解释理由和证据引用。
 - `gapCodes`、`capCodes`：信息缺口和封顶原因。
 
-若有有效 peer prior：
+只有 cohort 和模型均已冻结时才允许 peer prior。若有有效 peer prior 且批准模型仍使用该公式：
 
 `finalDimensionScore = observedScore × evidenceWeight + peerPriorScore × (1 - evidenceWeight)`
 
-若没有有效 prior，按当前评分合同决定是否允许 observed score 直接成为 final；无法满足前置条件时不评分。总分只汇总六个已合法计算的 `finalDimensionScore`，所有维度完整前不得伪造完整总分或等级。
+Agent 提供 observedScore、证据等级、理由和 Claim/Source；finalDimensionScore、总分和等级由批准的确定性 validator/服务端规则计算。无法满足前置条件时不评分。所有维度完整前不得生成总分或等级；等级阈值未出现在批准 reference-data 时不得臆造。
 
-Assessment 使用 `assessmentType=lead_value`、`modelCode=GETO_LEAD_VALUE`、服务端当前 `modelVersion`，并写 `diligenceStatus`、`asOf`、`levelCode`、`scoreRationale`、`conclusion` 和 `capabilityFoundation`。存在未评分维度时省略 `levelCode`。服务端会拒绝维度缺失、重复、maxScore 不符、公式不一致、能力底座或证据引用不完整的 payload。
+Assessment 使用 `assessmentType=lead_value`、`modelCode=GETO_LEAD_VALUE`、服务端当前 `modelVersion`，并写 `producerSkill=geto-diligence-company`、`diligenceStatus`、`assessmentStatus`、`asOf`、`scoreRationale`、`conclusion` 和 `capabilityFoundation`。仅在服务端返回合法结果时保存 totalScore、levelCode、`scoreCalculatedBy` 和 `ratingScaleVersion`。服务端应拒绝维度缺失、重复、maxScore 不符、公式不一致、能力底座或证据引用不完整的 payload。

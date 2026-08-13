@@ -2,13 +2,14 @@
 
 ## 顺序
 
-1. Company 与 CompanyRole/LegalEntity identity；先 `companies:resolve`。
-2. Product、Project/Opportunity；Project 先 `projects:resolve`。
+1. Company 与 CompanyRole/LegalEntity identity；先 `companies:resolve`。CommercialAccount 以一个市场内一家公司一个账户的规则内嵌，不使用独立 CRUD。
+2. Product、Project/Opportunity；Project 先 `projects:resolve`。Opportunity 与 Project 一一对应并内嵌，不使用独立 CRUD。
 3. ProjectParticipant、ProjectProduct、Relationship。
 4. Assessment 与 AssessmentDimension。
 5. Source、Claim、ClaimSourceLink。
 6. Contact、CustomsEvidence、FinancialRecord。
-7. 对同一 subject 的 draft keys 做显式 submit。
+7. owner-scoped list + `contentStatus=Draft` 回读稳定 draft/resource keys。
+8. 当前 OpenAPI 暴露时执行 `drafts:validate`，再对同一 subject 的 draft keys 做显式 submit。
 
 实际 endpoint、method、query 和 DTO 始终从当前 OpenAPI 读取；此顺序不授权调用缺失接口。
 
@@ -30,3 +31,5 @@ Contact、Customs、Financial 的 provider observation 写 `provider`、`sourceK
 ## 状态
 
 研究状态 `normalized|claim_only|not_queried|not_found|conflicting|not_applicable|stale` 与发布状态 `private_draft|pending_approval|published|changes_requested` 分开。Provider 的 unavailable 不能映射为 not_found。
+
+Assessment、ClaimSourceLink、ProjectProduct 和 Source 的 draft 必须能由 owner-scoped 对象 list 找回，并返回足以继续 update/submit 的稳定 draftKey/resourceKey；只有内部 revision/modifiedOn 可作为审计元数据，不要求 Agent 做版本协商。
