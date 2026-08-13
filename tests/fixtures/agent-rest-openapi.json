@@ -60,6 +60,51 @@
         }
       }
     },
+    "/api/market-intelligence/v1/markets/{marketCode}/sources": {
+      "get": {
+        "operationId": "ListSources",
+        "parameters": [
+          {
+            "name": "scopeCode",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "contentStatus",
+            "in": "query",
+            "required": false,
+            "schema": {"type": "string", "enum": ["Published", "Draft"]}
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["items"],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["contentStatus", "draftKey", "sourceKey"],
+                        "properties": {
+                          "contentStatus": {"type": "string", "enum": ["Draft"]},
+                          "draftKey": {"type": "string", "minLength": 1},
+                          "sourceKey": {"type": "string", "minLength": 1}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/market-intelligence/v1/markets/{marketCode}/drafts/companies": {
       "post": {
         "operationId": "CreateCompanyDraft",

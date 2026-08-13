@@ -32,3 +32,13 @@
 Agent 提供 observedScore、证据等级、理由和 Claim/Source；finalDimensionScore、总分和等级由批准的确定性 validator/服务端规则计算。无法满足前置条件时不评分。所有维度完整前不得生成总分或等级；等级阈值未出现在批准 reference-data 时不得臆造。
 
 Assessment 使用 `assessmentType=lead_value`、`modelCode=GETO_LEAD_VALUE`、服务端当前 `modelVersion`，并写 `producerSkill=geto-diligence-company`、`diligenceStatus`、`assessmentStatus`、`asOf`、`scoreRationale`、`conclusion` 和 `capabilityFoundation`。仅在服务端返回合法结果时保存 totalScore、levelCode、`scoreCalculatedBy` 和 `ratingScaleVersion`。服务端应拒绝维度缺失、重复、maxScore 不符、公式不一致、能力底座或证据引用不完整的 payload。
+
+`assessmentStatus` 用于区分可恢复断点与可提交结果：
+
+- `pending_diligence`：背调尚未完成、失败或主体冲突；不传 dimensions。
+- `pending_capability_foundation`：能力底座尚不可用；不传 dimensions。
+- `pending_model`：当前批准模型不可用；不传 dimensions。
+- `incomplete_evidence`：背调已完成，但至少一个维度为 `U`；不生成总分或等级。
+- `completed`：六个维度均可评分；总分只接受服务端确定性计算结果，等级仍取决于已批准的等级规则。
+
+前三种状态只能作为私人草稿检查点，不能通过提交前校验或进入人工审核。

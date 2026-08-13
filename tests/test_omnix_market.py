@@ -95,6 +95,18 @@ class OpenApiContractTests(unittest.TestCase):
         )
         self.assertEqual(errors, [])
 
+        source_template = CLIENT.resolve_operation(
+            SPEC, "GET", "/api/market-intelligence/v1/markets/AU/sources"
+        )
+        source_operation = CLIENT.operation_definition(SPEC, source_template, "GET")
+        source_errors = CLIENT.validate_query(
+            SPEC,
+            source_template,
+            source_operation,
+            "scopeCode=construction_formwork&contentStatus=Draft",
+        )
+        self.assertEqual(source_errors, [])
+
     def test_unknown_query_parameter_is_rejected(self) -> None:
         template = CLIENT.resolve_operation(
             SPEC, "GET", "/api/market-intelligence/v1/markets/AU/companies"
@@ -131,6 +143,19 @@ class OpenApiContractTests(unittest.TestCase):
             SPEC,
         )
         self.assertTrue(any("draftKey" in error for error in errors))
+
+        source_operation = CLIENT.operation_definition(
+            SPEC,
+            "/api/market-intelligence/v1/markets/{marketCode}/sources",
+            "GET",
+        )
+        source_schema = CLIENT.response_schema(SPEC, source_operation, 200)
+        source_errors = CLIENT.validate_json_schema(
+            {"items": [{"contentStatus": "Draft", "draftKey": "draft:source:1"}]},
+            source_schema,
+            SPEC,
+        )
+        self.assertTrue(any("sourceKey" in error for error in source_errors))
 
 
 class RequestSafetyTests(unittest.TestCase):
