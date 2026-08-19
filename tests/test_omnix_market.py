@@ -5,14 +5,15 @@ import importlib.util
 import json
 import tempfile
 import unittest
+import urllib.error
 from contextlib import redirect_stdout
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = json.loads((ROOT / "tests/fixtures/agent-rest-openapi.json").read_text(encoding="utf-8"))
+SPEC = json.loads((ROOT / "tests/fixtures/company-aggregate-openapi.json").read_text(encoding="utf-8"))
 
 
 def load_client():
@@ -31,6 +32,9 @@ class FakeResponse:
     status = 200
     headers = {"Retry-After": None}
 
+    def __init__(self, body: bytes | None = None) -> None:
+        self.body = body or b'{"companyKey":"company-1","visibility":"private","detailRoute":"/market/companies/company-1"}'
+
     def __enter__(self):
         return self
 
@@ -38,175 +42,116 @@ class FakeResponse:
         return False
 
     def read(self) -> bytes:
-        return b'{"validationStatus":"valid"}'
+        return self.body
 
 
 class CapturingOpener:
-    def __init__(self) -> None:
+    def __init__(self, response=None) -> None:
         self.request = None
+        self.response = response or FakeResponse()
 
     def open(self, request, timeout):  # noqa: ANN001, ARG002
         self.request = request
-        return FakeResponse()
+        if isinstance(self.response, Exception):
+            raise self.response
+        return self.response
 
 
 def args(method: str, path: str, body: str | None = None, **overrides):
     values = {
         "method": method, "path": path, "body": body, "idempotency_key": None,
-        "confirm_delete": False, "confirm_submit": False, "timeout": 1.0,
+        "confirm_delete": False, "confirm_restore": False, "timeout": 1.0,
     }
     values.update(overrides)
     return argparse.Namespace(**values)
 
 
 class OpenApiContractTests(unittest.TestCase):
-    def test_runtime_docs_do_not_embed_release_history(self) -> None:
-        forbidden = (
-            "未合并 PR", "测试环境尚未", "当前服务端 main", "MCP", "ETag", "If-Match",
-            "17 个只读", "59 个", "60 个",
-        )
-        documents = [ROOT / "SKILL.md", *sorted((ROOT / "references").glob("*.md"))]
-        for document in documents:
-            text = document.read_text(encoding="utf-8")
-            for phrase in forbidden:
-                with self.subTest(document=document.name, phrase=phrase):
-                    self.assertNotIn(phrase, text)
-
-    def test_capability_surface_excludes_owner_draft_list_and_approvals(self) -> None:
+    def test_capability_surface_is_only_unversioned_company_aggregate(self) -> None:
         operations = CLIENT.available_operations(SPEC)
         paths = {(item["method"], item["path"]) for item in operations}
-        self.assertIn(
-            ("POST", "/api/market-intelligence/v1/markets/{marketCode}/drafts:validate"),
-            paths,
-        )
-        self.assertNotIn(
-            ("GET", "/api/market-intelligence/v1/markets/{marketCode}/drafts"),
-            paths,
-        )
-        self.assertFalse(any("approvals" in path for _, path in paths))
+        self.assertEqual(paths, CLIENT.ALLOWED_OPERATIONS)
+        self.assertFalse(any("/v1/" in path or "/v2/" in path for _, path in paths))
+        self.assertFalse(any("draft" in path.casefold() or "approval" in path.casefold() for _, path in paths))
 
-    def test_owner_scoped_object_list_accepts_draft_filter(self) -> None:
-        template = CLIENT.resolve_operation(
-            SPEC, "GET", "/api/market-intelligence/v1/markets/AU/companies"
-        )
-        operation = CLIENT.operation_definition(SPEC, template, "GET")
-        errors = CLIENT.validate_query(
-            SPEC, template, operation, "scopeCode=construction_formwork&contentStatus=Draft"
-        )
-        self.assertEqual(errors, [])
-
-        source_template = CLIENT.resolve_operation(
-            SPEC, "GET", "/api/market-intelligence/v1/markets/AU/sources"
-        )
-        source_operation = CLIENT.operation_definition(SPEC, source_template, "GET")
-        source_errors = CLIENT.validate_query(
-            SPEC,
-            source_template,
-            source_operation,
-            "scopeCode=construction_formwork&contentStatus=Draft",
-        )
-        self.assertEqual(source_errors, [])
-
-    def test_unknown_query_parameter_is_rejected(self) -> None:
-        template = CLIENT.resolve_operation(
-            SPEC, "GET", "/api/market-intelligence/v1/markets/AU/companies"
-        )
-        operation = CLIENT.operation_definition(SPEC, template, "GET")
-        errors = CLIENT.validate_query(
-            SPEC, template, operation, "scopeCode=construction_formwork&ownerId=other"
-        )
-        self.assertTrue(any("ownerId" in error for error in errors))
+    def test_versioned_or_draft_path_is_refused(self) -> None:
+        for path in (
+            "/api/market-intelligence/v1/companies",
+            "/api/market-intelligence/v2/companies",
+            "/api/market-intelligence/drafts/companies",
+        ):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, "legacy|allowed"):
+                CLIENT.resolve_operation(SPEC, "GET", path)
 
     def test_request_body_is_validated_against_openapi(self) -> None:
-        operation = CLIENT.operation_definition(
-            SPEC,
-            "/api/market-intelligence/v1/markets/{marketCode}/drafts/companies",
-            "POST",
-        )
+        operation = CLIENT.operation_definition(SPEC, "/api/market-intelligence/companies", "POST")
         schema = CLIENT.request_schema(SPEC, operation)
-        errors = CLIENT.validate_json_schema(
-            {"resourceKey": "company:au:test", "unexpected": True}, schema, SPEC
-        )
-        self.assertTrue(any("canonicalName" in error for error in errors))
+        errors = CLIENT.validate_json_schema({"visibility": "private", "unexpected": True}, schema, SPEC)
+        self.assertTrue(any("company" in error for error in errors))
         self.assertTrue(any("unexpected" in error for error in errors))
 
-    def test_draft_discovery_response_without_stable_keys_is_rejected(self) -> None:
-        operation = CLIENT.operation_definition(
-            SPEC,
-            "/api/market-intelligence/v1/markets/{marketCode}/companies",
-            "GET",
-        )
-        schema = CLIENT.response_schema(SPEC, operation, 200)
-        errors = CLIENT.validate_json_schema(
-            {"items": [{"contentStatus": "Draft", "resourceKey": "company:au:test"}]},
-            schema,
-            SPEC,
-        )
-        self.assertTrue(any("draftKey" in error for error in errors))
-
-        source_operation = CLIENT.operation_definition(
-            SPEC,
-            "/api/market-intelligence/v1/markets/{marketCode}/sources",
-            "GET",
-        )
-        source_schema = CLIENT.response_schema(SPEC, source_operation, 200)
-        source_errors = CLIENT.validate_json_schema(
-            {"items": [{"contentStatus": "Draft", "draftKey": "draft:source:1"}]},
-            source_schema,
-            SPEC,
-        )
-        self.assertTrue(any("sourceKey" in error for error in source_errors))
+    def test_openapi_fixture_contains_no_legacy_market_routes(self) -> None:
+        self.assertFalse(any("/api/market-intelligence/v" in path for path in SPEC["paths"]))
 
 
 class RequestSafetyTests(unittest.TestCase):
-    def run_request(self, request_args):
-        capturing = CapturingOpener()
-        with mock.patch.object(
-            CLIENT, "config", return_value=("https://omnix.example", "omx_test_fixture", "spec")
-        ), mock.patch.object(CLIENT, "load_openapi", return_value=SPEC), mock.patch.object(
-            CLIENT, "opener", return_value=capturing
-        ), redirect_stdout(StringIO()):
+    def run_request(self, request_args, response=None):
+        capturing = CapturingOpener(response)
+        output = StringIO()
+        with mock.patch.object(CLIENT, "config", return_value=("https://omnix.example", "omx_test_fixture", "spec")), mock.patch.object(
+            CLIENT, "load_openapi", return_value=SPEC
+        ), mock.patch.object(CLIENT, "opener", return_value=capturing), redirect_stdout(output):
             result = CLIENT.command_request(request_args)
-        return result, capturing.request
+        return result, capturing.request, json.loads(output.getvalue())
 
-    def test_validate_is_no_write_and_needs_no_idempotency_key(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            body = Path(directory) / "validate.json"
-            body.write_text('{"draftKeys":["draft:company:1"]}', encoding="utf-8")
-            result, request = self.run_request(args(
-                "POST", "/api/market-intelligence/v1/markets/AU/drafts:validate", str(body)
-            ))
-        self.assertEqual(result, 0)
-        self.assertIsNotNone(request)
-        self.assertIsNone(request.get_header("Idempotency-key"))
-        self.assertIsNone(request.get_header("If-match"))
+    def write_body(self, directory: str, value: dict) -> str:
+        path = Path(directory) / "body.json"
+        path.write_text(json.dumps(value), encoding="utf-8")
+        return str(path)
 
     def test_create_requires_idempotency_key(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            body = Path(directory) / "company.json"
-            body.write_text(
-                '{"resourceKey":"company:au:test","canonicalName":"Example"}',
-                encoding="utf-8",
-            )
+            body = self.write_body(directory, {"company": {}, "visibility": "private"})
             with self.assertRaisesRegex(ValueError, "idempotency"):
-                self.run_request(args(
-                    "POST", "/api/market-intelligence/v1/markets/AU/drafts/companies", str(body)
-                ))
+                self.run_request(args("POST", "/api/market-intelligence/companies", body))
 
-    def test_update_does_not_require_or_send_if_match(self) -> None:
+    def test_update_has_no_etag_or_if_match(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            body = Path(directory) / "company.json"
-            body.write_text(
-                '{"resourceKey":"company:au:test","canonicalName":"Example"}',
-                encoding="utf-8",
-            )
-            result, request = self.run_request(args(
-                "PUT",
-                "/api/market-intelligence/v1/markets/AU/drafts/companies/company:au:test",
-                str(body),
-            ))
+            body = self.write_body(directory, {"company": {}, "visibility": "private"})
+            result, request, output = self.run_request(args("PUT", "/api/market-intelligence/companies/company-1", body))
         self.assertEqual(result, 0)
         self.assertIsNone(request.get_header("If-match"))
+        self.assertEqual(output["uploadStatus"], "uploaded_private")
+
+    def test_patch_visibility_reports_public_upload(self) -> None:
+        response = FakeResponse(b'{"companyKey":"company-1","visibility":"public","detailRoute":"/market/companies/company-1"}')
+        with tempfile.TemporaryDirectory() as directory:
+            body = self.write_body(directory, {"visibility": "public"})
+            result, _, output = self.run_request(args("PATCH", "/api/market-intelligence/companies/company-1", body), response)
+        self.assertEqual(result, 0)
+        self.assertEqual(output["uploadStatus"], "uploaded_public")
+        self.assertEqual(output["detailRoute"], "/market/companies/company-1")
+
+    def test_delete_and_restore_require_explicit_confirmation(self) -> None:
+        with self.assertRaisesRegex(ValueError, "confirm-delete"):
+            self.run_request(args("DELETE", "/api/market-intelligence/companies/company-1"))
+        with tempfile.TemporaryDirectory() as directory:
+            body = self.write_body(directory, {})
+            with self.assertRaisesRegex(ValueError, "confirm-restore"):
+                self.run_request(args("POST", "/api/market-intelligence/companies/company-1:restore", body))
+
+    def test_public_duplicate_maps_to_blocked_status(self) -> None:
+        error = urllib.error.HTTPError(
+            "https://omnix.example/api/market-intelligence/companies", 409,
+            "conflict", {}, BytesIO(b'{"code":"PUBLIC_IDENTITY_DUPLICATE","message":"public identity already exists"}'),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            body = self.write_body(directory, {"company": {}, "visibility": "public"})
+            result, _, output = self.run_request(args(
+                "POST", "/api/market-intelligence/companies", body, idempotency_key="stable"
+            ), error)
+        self.assertEqual(result, 1)
+        self.assertEqual(output["uploadStatus"], "blocked_public_duplicate")
 
 
 if __name__ == "__main__":
