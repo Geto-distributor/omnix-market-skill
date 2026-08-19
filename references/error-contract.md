@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | 401 | Key 缺失、无效、撤销或过期 | unauthenticated，停止 |
 | 403 | principal 无权限或无数据归属 | forbidden，不尝试其他身份 |
-| 404 | Company 或新 endpoint 不存在 | 区分 resolve miss 与 capability miss；不回退旧接口 |
+| 404 | Company 或 endpoint 不存在 | 区分 resolve miss 与 capability miss |
 | 409 public identity conflict | 他人已有有效 public 强身份 | 保持/上传 private，返回 blocked_public_duplicate |
 | 409 other | 身份、状态或唯一性冲突 | 重新 resolve，人工仲裁 |
 | 422 | OpenAPI/业务验证失败 | 修正本地映射后重试 |

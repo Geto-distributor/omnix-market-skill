@@ -27,7 +27,6 @@ ALLOWED_OPERATIONS = {
     ("POST", f"{MARKET_ROOT}/companies/{{companyKey}}:restore"),
 }
 REQUIRED_OPERATIONS = ALLOWED_OPERATIONS
-LEGACY_MARKERS = ("/v1/", "/v2/", "/draft", "/approval", ":submit", ":approve", ":reject")
 
 
 class ClientError(ValueError):
@@ -74,8 +73,7 @@ def load_openapi(spec_url: str) -> dict[str, Any]:
 
 
 def safe_operation(method: str, template: str) -> bool:
-    lower = template.lower()
-    return (method, template) in ALLOWED_OPERATIONS and not any(marker in lower for marker in LEGACY_MARKERS)
+    return (method, template) in ALLOWED_OPERATIONS
 
 
 def available_operations(spec: dict[str, Any]) -> list[dict[str, str]]:
@@ -96,13 +94,11 @@ def available_operations(spec: dict[str, Any]) -> list[dict[str, str]]:
 
 def template_regex(template: str) -> re.Pattern[str]:
     escaped = re.escape(template)
-    pattern = re.sub(r"\\\{[^{}]+\\\}", r"[^/]+", escaped)
+    pattern = re.sub(r"\\\{[^{}]+\\\}", r"[^/:]+", escaped)
     return re.compile(f"^{pattern}$")
 
 
 def resolve_operation(spec: dict[str, Any], method: str, concrete_path: str) -> str:
-    if any(marker in concrete_path.lower() for marker in LEGACY_MARKERS):
-        raise ValueError("legacy/versioned Market Intelligence paths are refused")
     matches = [
         item["path"] for item in available_operations(spec)
         if item["method"] == method and template_regex(item["path"]).match(concrete_path)

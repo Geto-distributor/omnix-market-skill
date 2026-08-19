@@ -1,6 +1,6 @@
 ---
 name: omnix-market
-description: 通过 OmniX 单一无版本 Market Intelligence OpenAPI 解析强身份，并可选创建、读取、更新、切换可见性、软删除或恢复完整 Company Aggregate。用于本地 GETO ResearchBundle 验证完成后由用户明确选择上传 private/public，或管理当前用户有权操作的 Company；不处理研究 Draft/Approval/Submit/Reject、ResearchDelta、ETag 或旧 API fallback。
+description: 通过 OmniX Market Intelligence OpenAPI 解析强身份，并可选创建、读取、更新、切换可见性、软删除或恢复完整 Company Aggregate。用于本地 GETO ResearchBundle 验证完成后由用户明确选择上传 private/public，或管理当前用户有权操作的 Company。
 ---
 
 # OmniX Company Aggregate 客户端
@@ -25,7 +25,7 @@ Key 不得进入 company.json、progress.md、报告、日志、来源或命令�
 
 ## 允许的 API
 
-只允许 OpenAPI 实际声明的以下无版本路径：
+当前 Company Aggregate 操作面：
 
 ```text
 GET    /api/market-intelligence/companies
@@ -38,7 +38,7 @@ DELETE /api/market-intelligence/companies/{companyKey}
 POST   /api/market-intelligence/companies/{companyKey}:restore
 ```
 
-任何 `/api/market-intelligence/v1`、`/v2`、Draft、Approval、Submit、Approve、Reject、redirect、adapter 或 fallback 都必须拒绝。
+客户端只执行上表中同时出现在运行时 OpenAPI 的操作。
 
 ## 调用
 
@@ -58,11 +58,11 @@ python scripts/omnix_market.py request POST '/api/market-intelligence/companies/
 
 ### 1. 本地门禁
 
-确认国家 `progress.md`、公司 `company.json`、`report.md` 和 `Sources/sources.md` 已通过本地验证。ERROR 阻止上传；WARNING 必须显式保留。上传完整 Company Aggregate，不生成或要求本地 Company/Classification ID。
+确认国家 `progress.md`、公司 `company.json`、`report.md` 和 `Sources/sources.md` 已通过本地验证。ERROR 阻止上传；WARNING 必须显式保留。上传完整 Company Aggregate。
 
 ### 2. Capability check
 
-运行 `capabilities`。若新 API 未完整发布，返回 partial/upstream_unavailable 并停止；不得探测或回退旧接口。
+运行 `capabilities`。操作面完整时继续；否则返回 `partial|upstream_unavailable` 和缺失操作。
 
 ### 3. 强身份 resolve
 

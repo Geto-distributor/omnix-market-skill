@@ -67,6 +67,19 @@ def args(method: str, path: str, body: str | None = None, **overrides):
 
 
 class OpenApiContractTests(unittest.TestCase):
+    def test_runtime_docs_read_as_a_current_contract(self) -> None:
+        forbidden = (
+            "ResearchDelta", "Draft/Approval", "Submit/Reject", "ETag",
+            "If-Match", "旧接口", "旧 Market", "fallback", "legacy",
+            "/api/market-intelligence/v1", "/api/market-intelligence/v2",
+        )
+        documents = [ROOT / "README.md", ROOT / "SKILL.md", *sorted((ROOT / "references").glob("*.md"))]
+        for document in documents:
+            text = document.read_text(encoding="utf-8")
+            for phrase in forbidden:
+                with self.subTest(document=document.name, phrase=phrase):
+                    self.assertNotIn(phrase, text)
+
     def test_capability_surface_is_only_unversioned_company_aggregate(self) -> None:
         operations = CLIENT.available_operations(SPEC)
         paths = {(item["method"], item["path"]) for item in operations}
@@ -74,13 +87,13 @@ class OpenApiContractTests(unittest.TestCase):
         self.assertFalse(any("/v1/" in path or "/v2/" in path for _, path in paths))
         self.assertFalse(any("draft" in path.casefold() or "approval" in path.casefold() for _, path in paths))
 
-    def test_versioned_or_draft_path_is_refused(self) -> None:
+    def test_out_of_contract_path_is_refused(self) -> None:
         for path in (
-            "/api/market-intelligence/v1/companies",
-            "/api/market-intelligence/v2/companies",
-            "/api/market-intelligence/drafts/companies",
+            "/api/market-intelligence/projects",
+            "/api/market-intelligence/companies/company-1:publish",
+            "/api/market-intelligence/settings",
         ):
-            with self.subTest(path=path), self.assertRaisesRegex(ValueError, "legacy|allowed"):
+            with self.subTest(path=path), self.assertRaisesRegex(ValueError, "allowed"):
                 CLIENT.resolve_operation(SPEC, "GET", path)
 
     def test_request_body_is_validated_against_openapi(self) -> None:
@@ -90,8 +103,8 @@ class OpenApiContractTests(unittest.TestCase):
         self.assertTrue(any("company" in error for error in errors))
         self.assertTrue(any("unexpected" in error for error in errors))
 
-    def test_openapi_fixture_contains_no_legacy_market_routes(self) -> None:
-        self.assertFalse(any("/api/market-intelligence/v" in path for path in SPEC["paths"]))
+    def test_openapi_fixture_matches_the_company_surface(self) -> None:
+        self.assertEqual(set(SPEC["paths"]), {path for _, path in CLIENT.ALLOWED_OPERATIONS})
 
 
 class RequestSafetyTests(unittest.TestCase):

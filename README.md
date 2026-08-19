@@ -2,7 +2,7 @@
 
 面向 OmniX 单一无版本 Market Intelligence OpenAPI 的安全客户端。它在 GETO 本地 ResearchBundle 验证完成、且用户明确同意后，解析强身份并创建或更新完整 Company Aggregate。
 
-允许的业务能力是 Company list/read/resolve/create/update/patch/soft-delete/restore。客户端拒绝版本化旧 Market 路径和研究流程端点，不实现兼容或 fallback。
+业务能力包括 Company list/read/resolve/create/update/patch/soft-delete/restore，具体操作面以运行时 OpenAPI 为准。
 
 配置：
 

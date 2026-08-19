@@ -2,7 +2,7 @@
 
 ## 本地输入
 
-上传源是已验证的 `company.json`，不是 ResearchDelta 或独立子资源包。本地不包含平台 ID、ownerUserId、identityKey、visibility 或 deletedAt。
+上传源是已验证的 `company.json`。用户在上传时选择 visibility，服务端根据认证 principal 和强身份解析聚合管理字段。
 
 ## Resolve
 
