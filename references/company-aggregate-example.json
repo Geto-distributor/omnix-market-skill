@@ -1,0 +1,1281 @@
+{
+  "identity": {
+    "entityKind": "operating_company",
+    "jurisdiction": "AU",
+    "registrationNumber": "123456789",
+    "primaryDomain": "example.com"
+  },
+  "visibility": "public",
+  "marketCode": "AU",
+  "scopeCode": "construction_formwork",
+  "asOf": "2026-08-20",
+  "lastVerifiedOn": "2026-08-20",
+  "content": {
+    "company": {
+      "companyName": "Example Build Systems Ltd.",
+      "entityType": "operating_company",
+      "country": "Australia",
+      "status": "active",
+      "summary": "Synthetic Australian contractor and aluminum-formwork system owner used only as a complete reference fixture.",
+      "researchConclusion": "Strong identity, owned product system, manufacturing, active project demand and one verified customer relationship are demonstrated by synthetic sources.",
+      "foundedOn": "2012-04-18",
+      "companyScale": "medium",
+      "headcount": 180,
+      "listingStatus": "self_listed",
+      "listingDetails": "Synthetic listing on the Example Securities Exchange under ticker EBS.",
+      "marketPosition": "Regional main contractor and specialist aluminum-formwork supplier.",
+      "priority": "high",
+      "procurementBoundary": "Project teams recommend temporary-works suppliers; head office approves framework suppliers and payment terms.",
+      "evidence": [
+        {
+          "sourceTitle": "Example Registry extract",
+          "sourceUrl": "https://registry.example/companies/123456789",
+          "publisher": "Example Corporate Registry",
+          "sourceType": "registry",
+          "publishedOn": "2026-08-01",
+          "retrievedOn": "2026-08-20",
+          "locator": "Registration 123456789",
+          "excerpt": "Example Build Systems Ltd. is active and registered in Australia.",
+          "note": "Synthetic strong identity anchor for the reference fixture."
+        },
+        {
+          "sourceTitle": "Example Build Systems 2025 annual report",
+          "sourceUrl": "https://example.com/investors/annual-report-2025.pdf",
+          "publisher": "Example Build Systems Ltd.",
+          "sourceType": "financial_report",
+          "publishedOn": "2026-08-01",
+          "retrievedOn": "2026-08-20",
+          "locator": "Pages 12, 38 and 72",
+          "excerpt": "FY2025 revenue was AUD 185 million and net profit was AUD 14.2 million.",
+          "note": "Synthetic audited financial evidence for field placement only."
+        }
+      ]
+    },
+    "aliases": [
+      {
+        "name": "EBS Formwork",
+        "type": "trading_name",
+        "language": "en-AU",
+        "current": true,
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems official profile",
+            "sourceUrl": "https://example.com/company-profile",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Trading names",
+            "excerpt": "EBS Formwork is listed as a trading name.",
+            "note": "Alias and entity boundary."
+          }
+        ]
+      }
+    ],
+    "registrations": [
+      {
+        "registrationType": "company_number",
+        "registrationNumber": "123456789",
+        "registeredName": "Example Build Systems Ltd.",
+        "registeredBusinessScope": "Construction contracting, formwork design, manufacturing, sales and rental.",
+        "jurisdiction": "AU",
+        "status": "active",
+        "registeredOn": "2012-04-18",
+        "expiresOn": "2099-12-31",
+        "evidence": [
+          {
+            "sourceTitle": "Example Registry extract",
+            "sourceUrl": "https://registry.example/companies/123456789",
+            "publisher": "Example Corporate Registry",
+            "sourceType": "registry",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Registration 123456789",
+            "excerpt": "Example Build Systems Ltd. is active and registered in Australia.",
+            "note": "Synthetic strong identity anchor for the reference fixture."
+          }
+        ]
+      }
+    ],
+    "capitalRecords": [
+      {
+        "capitalType": "registered_capital",
+        "amount": 25000000,
+        "currency": "AUD",
+        "asOf": "2025-12-31",
+        "status": "verified",
+        "note": "Issued share capital reported in the synthetic audited statement.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems 2025 equity note",
+            "sourceUrl": "https://example.com/investors/annual-report-2025-equity-note.pdf",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "financial_report",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Note 18 — Contributed equity",
+            "excerpt": "Issued and fully paid ordinary share capital was AUD 25 million at 31 December 2025.",
+            "note": "Synthetic capital evidence isolated from operating-performance observations."
+          }
+        ]
+      },
+      {
+        "capitalType": "paid_in_capital",
+        "amount": 25000000,
+        "currency": "AUD",
+        "asOf": "2025-12-31",
+        "status": "verified",
+        "note": "Synthetic paid-in capital separately recorded from registered capital.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems 2025 equity note",
+            "sourceUrl": "https://example.com/investors/annual-report-2025-equity-note.pdf",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "financial_report",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Note 18 — Contributed equity",
+            "excerpt": "Issued and fully paid ordinary share capital was AUD 25 million at 31 December 2025.",
+            "note": "Synthetic capital evidence isolated from operating-performance observations."
+          }
+        ]
+      }
+    ],
+    "websites": [
+      {
+        "url": "https://example.com",
+        "domain": "example.com",
+        "type": "official",
+        "status": "active",
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems official profile",
+            "sourceUrl": "https://example.com/company-profile",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Website footer",
+            "excerpt": "Example Build Systems Ltd. and registration 123456789.",
+            "note": "Domain-to-entity binding."
+          }
+        ]
+      }
+    ],
+    "addresses": [
+      {
+        "fullAddress": "100 Example Street, Sydney NSW 2000, Australia",
+        "type": "headquarters",
+        "country": "Australia",
+        "region": "Oceania",
+        "city": "Sydney",
+        "postalCode": "2000",
+        "current": true,
+        "evidence": [
+          {
+            "sourceTitle": "Example Registry extract",
+            "sourceUrl": "https://registry.example/companies/123456789",
+            "publisher": "Example Corporate Registry",
+            "sourceType": "registry",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Registration 123456789",
+            "excerpt": "Example Build Systems Ltd. is active and registered in Australia.",
+            "note": "Synthetic strong identity anchor for the reference fixture."
+          }
+        ]
+      }
+    ],
+    "marketPresence": [
+      {
+        "country": "Australia",
+        "region": "New South Wales",
+        "presenceType": "office_and_factory",
+        "status": "confirmed",
+        "description": "Sales office and owned aluminum-formwork factory serving Australia and New Zealand.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Aluminum Formwork product page",
+            "sourceUrl": "https://example.com/products/aluminum-formwork",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Product, manufacturing and factory section",
+            "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+            "note": "Supports overlapping product, brand control and own-factory manufacturing."
+          }
+        ]
+      }
+    ],
+    "socialChannels": [
+      {
+        "platform": "LinkedIn",
+        "url": "https://www.linkedin.com/company/example-build-systems",
+        "handle": "example-build-systems",
+        "officialStatus": "active",
+        "lastActivityOn": "2026-08-18",
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems LinkedIn page",
+            "sourceUrl": "https://www.linkedin.com/company/example-build-systems",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "social_media",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "About",
+            "excerpt": "Company profile links to example.com.",
+            "note": "Synthetic social-channel binding."
+          }
+        ]
+      }
+    ],
+    "researchClassifications": [
+      {
+        "classification": "lead",
+        "status": "confirmed",
+        "country": "Australia",
+        "productScope": [
+          "aluminum_formwork",
+          "climbing_formwork"
+        ],
+        "reason": "The company is a verified contractor with an active repeated-floor project and an identified procurement route.",
+        "evidence": [
+          {
+            "sourceTitle": "Harbour Residence project page",
+            "sourceUrl": "https://example.com/projects/harbour-residence",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Project team and procurement",
+            "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+            "note": "Supports the named customer relationship and active procurement window."
+          },
+          {
+            "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+            "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+            "publisher": "Example Developments Pty Ltd.",
+            "sourceType": "customer_document",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Inquiry body and Attachment A",
+            "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+            "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+          }
+        ]
+      },
+      {
+        "classification": "competitor",
+        "status": "confirmed",
+        "country": "Australia",
+        "productScope": [
+          "aluminum_formwork",
+          "formwork_rental"
+        ],
+        "reason": "Owned brand, own-factory manufacturing, direct sales and rental establish product and channel competition.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Aluminum Formwork product page",
+            "sourceUrl": "https://example.com/products/aluminum-formwork",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Product, manufacturing and factory section",
+            "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+            "note": "Supports overlapping product, brand control and own-factory manufacturing."
+          }
+        ]
+      }
+    ],
+    "companyRoles": [
+      {
+        "role": "main_contractor",
+        "scope": "High-rise residential construction",
+        "country": "Australia",
+        "projectName": "Harbour Residence",
+        "status": "confirmed",
+        "rationale": "The official project page names the company as main contractor.",
+        "evidence": [
+          {
+            "sourceTitle": "Harbour Residence project page",
+            "sourceUrl": "https://example.com/projects/harbour-residence",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Project team and procurement",
+            "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+            "note": "Supports the named customer relationship and active procurement window."
+          }
+        ]
+      },
+      {
+        "role": "distributor_trading",
+        "scope": "Direct sale and rental of its own aluminum-formwork system",
+        "country": "Australia",
+        "projectName": "Harbour Residence",
+        "status": "confirmed",
+        "rationale": "The product page states direct commercial control and rental availability.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Aluminum Formwork product page",
+            "sourceUrl": "https://example.com/products/aluminum-formwork",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Product, manufacturing and factory section",
+            "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+            "note": "Supports overlapping product, brand control and own-factory manufacturing."
+          }
+        ]
+      }
+    ],
+    "productsAndServices": [
+      {
+        "name": "EX-Alu Aluminum Formwork System",
+        "systemName": "EX-Alu VMC 600",
+        "type": "product",
+        "category": "aluminum_formwork",
+        "description": "Owned modular aluminum-formwork system sold, rented, designed and supported by the company.",
+        "technologyTerms": [
+          "aluminum formwork",
+          "monolithic casting",
+          "VMC",
+          "early stripping"
+        ],
+        "applications": [
+          "high-rise residential",
+          "standard floors",
+          "concrete walls and slabs"
+        ],
+        "targetCustomers": [
+          "developers",
+          "main contractors",
+          "concrete subcontractors"
+        ],
+        "markets": [
+          "Australia",
+          "New Zealand"
+        ],
+        "commercialRoles": [
+          "manufacturer",
+          "system_owner",
+          "brand_owner",
+          "rental_provider"
+        ],
+        "manufacturingStatus": "own_factory_confirmed",
+        "manufacturingDescription": "Panels and accessories are fabricated at the synthetic Newcastle factory; selected fasteners are sourced externally.",
+        "factoryLocations": [
+          "Newcastle, New South Wales, Australia"
+        ],
+        "media": [
+          {
+            "url": "https://example.com/media/ex-alu-line.jpg",
+            "mediaType": "image",
+            "caption": "Synthetic EX-Alu panel production line.",
+            "lastVerifiedOn": "2026-08-20",
+            "evidence": [
+              {
+                "sourceTitle": "Example Aluminum Formwork product page",
+                "sourceUrl": "https://example.com/products/aluminum-formwork",
+                "publisher": "Example Build Systems Ltd.",
+                "sourceType": "official_website",
+                "publishedOn": "2026-08-01",
+                "retrievedOn": "2026-08-20",
+                "locator": "Product, manufacturing and factory section",
+                "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+                "note": "Supports overlapping product, brand control and own-factory manufacturing."
+              }
+            ]
+          }
+        ],
+        "representativeProject": "Harbour Residence",
+        "status": "confirmed",
+        "getoRelevance": "high",
+        "evidence": [
+          {
+            "sourceTitle": "Example Aluminum Formwork product page",
+            "sourceUrl": "https://example.com/products/aluminum-formwork",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Product, manufacturing and factory section",
+            "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+            "note": "Supports overlapping product, brand control and own-factory manufacturing."
+          }
+        ]
+      }
+    ],
+    "projects": [
+      {
+        "projectName": "Harbour Residence",
+        "country": "Australia",
+        "region": "New South Wales",
+        "city": "Sydney",
+        "address": "25 Example Quay, Sydney NSW 2000, Australia",
+        "projectType": "high_rise_residential",
+        "projectKind": "opportunity",
+        "stage": "formwork_supplier_shortlist",
+        "status": "active",
+        "startOn": "2025-02-01",
+        "expectedCompletionOn": "2027-12-31",
+        "completedOn": "2027-12-31",
+        "scale": {
+          "floors": 28,
+          "units": 210,
+          "area": 48600,
+          "areaUnit": "m2",
+          "value": 148000000,
+          "currency": "AUD",
+          "description": "28-storey, 210-unit reinforced-concrete residential tower"
+        },
+        "companyRole": "main_contractor_and_formwork_supplier",
+        "participants": [
+          {
+            "name": "Example Developments Pty Ltd.",
+            "role": "developer",
+            "identity": {
+              "jurisdiction": "AU",
+              "registrationNumber": "987654321",
+              "primaryDomain": "example-developments.test",
+              "otherLegalId": "ABN-98-765-432-100"
+            },
+            "status": "confirmed",
+            "lastVerifiedOn": "2026-08-20",
+            "evidence": [
+              {
+                "sourceTitle": "Harbour Residence project page",
+                "sourceUrl": "https://example.com/projects/harbour-residence",
+                "publisher": "Example Build Systems Ltd.",
+                "sourceType": "official_website",
+                "publishedOn": "2026-08-01",
+                "retrievedOn": "2026-08-20",
+                "locator": "Project team and procurement",
+                "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+                "note": "Supports the named customer relationship and active procurement window."
+              }
+            ]
+          },
+          {
+            "name": "Example Build Systems Ltd.",
+            "role": "main_contractor",
+            "identity": {
+              "jurisdiction": "AU",
+              "registrationNumber": "123456789",
+              "primaryDomain": "example.com",
+              "otherLegalId": "ABN-12-345-678-900"
+            },
+            "status": "confirmed",
+            "lastVerifiedOn": "2026-08-20",
+            "evidence": [
+              {
+                "sourceTitle": "Harbour Residence project page",
+                "sourceUrl": "https://example.com/projects/harbour-residence",
+                "publisher": "Example Build Systems Ltd.",
+                "sourceType": "official_website",
+                "publishedOn": "2026-08-01",
+                "retrievedOn": "2026-08-20",
+                "locator": "Project team and procurement",
+                "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+                "note": "Supports the named customer relationship and active procurement window."
+              }
+            ]
+          },
+          {
+            "name": "Example Structures Consulting Pty Ltd.",
+            "role": "consultant",
+            "identity": {
+              "jurisdiction": "AU",
+              "registrationNumber": "456789123",
+              "primaryDomain": "example-structures.test",
+              "otherLegalId": "ABN-45-678-912-300"
+            },
+            "status": "confirmed",
+            "lastVerifiedOn": "2026-08-20",
+            "evidence": [
+              {
+                "sourceTitle": "Harbour Residence project page",
+                "sourceUrl": "https://example.com/projects/harbour-residence",
+                "publisher": "Example Build Systems Ltd.",
+                "sourceType": "official_website",
+                "publishedOn": "2026-08-01",
+                "retrievedOn": "2026-08-20",
+                "locator": "Consultant",
+                "excerpt": "Structural consultant: Example Structures Consulting.",
+                "note": "Consultant participation."
+              }
+            ]
+          }
+        ],
+        "productsOrTechnologies": [
+          "aluminum formwork",
+          "reinforced concrete",
+          "BIM coordination"
+        ],
+        "potentialProducts": [
+          {
+            "productName": "GETO aluminum formwork",
+            "usageSummary": "Alternative supply for towers 2 and 3 with repeated standard floors.",
+            "evidence": [
+              {
+                "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+                "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+                "publisher": "Example Developments Pty Ltd.",
+                "sourceType": "customer_document",
+                "publishedOn": "2026-08-01",
+                "retrievedOn": "2026-08-20",
+                "locator": "Inquiry body and Attachment A",
+                "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+                "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+              }
+            ]
+          }
+        ],
+        "demandJudgement": "confirmed_active_demand",
+        "entryWindow": "Submit technical scheme before the 2026-09-15 shortlist deadline.",
+        "opportunity": "Benchmark cycle time, panel weight and lifecycle service against the incumbent EX-Alu system.",
+        "procurementBoundary": "Developer approves budget; main contractor owns technical shortlist; project commercial manager negotiates terms.",
+        "knownRelationship": "Example Developments is a verified current customer of Example Build Systems for this project.",
+        "getoRelevance": "high_and_time_sensitive",
+        "verificationStatus": "verified",
+        "lastVerifiedOn": "2026-08-20",
+        "importantNotes": "Synthetic active project that demonstrates every project and participant field.",
+        "evidence": [
+          {
+            "sourceTitle": "Harbour Residence project page",
+            "sourceUrl": "https://example.com/projects/harbour-residence",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Project team and procurement",
+            "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+            "note": "Supports the named customer relationship and active procurement window."
+          },
+          {
+            "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+            "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+            "publisher": "Example Developments Pty Ltd.",
+            "sourceType": "customer_document",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Inquiry body and Attachment A",
+            "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+            "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "relatedPartyName": "Example Developments Pty Ltd.",
+        "relatedPartyIdentity": {
+          "jurisdiction": "AU",
+          "registrationNumber": "987654321",
+          "primaryDomain": "example-developments.test",
+          "otherLegalId": "ABN-98-765-432-100"
+        },
+        "relatedPartyType": "company",
+        "relationshipType": "customer",
+        "direction": "mutual",
+        "projectName": "Harbour Residence",
+        "productName": "EX-Alu Aluminum Formwork System and design-and-construct service",
+        "country": "Australia",
+        "description": "Verified repeat customer relationship covering the main contract and the current formwork package.",
+        "cooperationMode": "sale_and_project_delivery",
+        "cooperationDepth": "repeat_business",
+        "customerQualificationStatus": "verified_customer",
+        "buyer": "Example Developments Pty Ltd.",
+        "actualUser": "Example Build Systems project delivery team",
+        "customerValueAssessment": {
+          "overallScore": 82.0,
+          "grade": "verified_high_value",
+          "assessedOn": "2026-08-20",
+          "evidence": [
+            {
+              "sourceTitle": "Harbour Residence project page",
+              "sourceUrl": "https://example.com/projects/harbour-residence",
+              "publisher": "Example Build Systems Ltd.",
+              "sourceType": "official_website",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Project team and procurement",
+              "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+              "note": "Supports the named customer relationship and active procurement window."
+            }
+          ]
+        },
+        "entryAssessment": {
+          "score": 5,
+          "maxScore": 5,
+          "rationale": "A documented new procurement window permits an alternative qualified supplier despite repeat business with the incumbent.",
+          "assessedOn": "2026-08-20",
+          "evidence": [
+            {
+              "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+              "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+              "publisher": "Example Developments Pty Ltd.",
+              "sourceType": "customer_document",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Inquiry body and Attachment A",
+              "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+              "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+            }
+          ]
+        },
+        "entryPoint": "Alternative supplier evaluation for towers 2 and 3.",
+        "limitations": [
+          "The buyer has not disclosed incumbent unit pricing.",
+          "Final supplier approval remains with the joint procurement committee."
+        ],
+        "exclusivity": {
+          "status": "non_exclusive",
+          "scope": "Harbour Residence supplier shortlist and future Australian projects",
+          "description": "The project permits alternative qualified formwork suppliers.",
+          "lastVerifiedOn": "2026-08-20",
+          "evidence": [
+            {
+              "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+              "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+              "publisher": "Example Developments Pty Ltd.",
+              "sourceType": "customer_document",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Inquiry body and Attachment A",
+              "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+              "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+            }
+          ]
+        },
+        "status": "confirmed",
+        "startedOn": "2023-05-10",
+        "endedOn": "2027-12-31",
+        "lastVerifiedOn": "2026-08-20",
+        "evidence": [
+          {
+            "sourceTitle": "Harbour Residence project page",
+            "sourceUrl": "https://example.com/projects/harbour-residence",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Project team and procurement",
+            "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+            "note": "Supports the named customer relationship and active procurement window."
+          },
+          {
+            "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+            "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+            "publisher": "Example Developments Pty Ltd.",
+            "sourceType": "customer_document",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Inquiry body and Attachment A",
+            "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+            "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+          }
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "contactType": "business",
+        "name": "Alex Example",
+        "jobTitle": "Commercial Director",
+        "department": "Commercial and Procurement",
+        "seniority": "director",
+        "responsibilities": "Approves supplier shortlists, commercial terms and framework onboarding.",
+        "buyingRole": "economic_buyer",
+        "location": "Sydney, Australia",
+        "workEmail": "alex@example.com",
+        "workPhone": "+61 2 5550 0100",
+        "linkedinUrl": "https://www.linkedin.com/in/alex-example",
+        "otherProfileUrl": "https://example.com/team/alex-example",
+        "verificationStatus": "verified",
+        "lastVerifiedOn": "2026-08-20",
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems official profile",
+            "sourceUrl": "https://example.com/company-profile",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Leadership team",
+            "excerpt": "Alex Example is Commercial Director.",
+            "note": "Role and responsibility evidence; email deliverability is not inferred."
+          }
+        ]
+      }
+    ],
+    "financialRecords": [
+      {
+        "recordType": "revenue",
+        "period": "FY2025",
+        "value": 185000000,
+        "currency": "AUD",
+        "unit": "currency_units",
+        "valueStatus": "audited",
+        "description": "Synthetic consolidated revenue.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems 2025 annual report",
+            "sourceUrl": "https://example.com/investors/annual-report-2025.pdf",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "financial_report",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Pages 12, 38 and 72",
+            "excerpt": "FY2025 revenue was AUD 185 million and net profit was AUD 14.2 million.",
+            "note": "Synthetic audited financial evidence for field placement only."
+          }
+        ]
+      },
+      {
+        "recordType": "net_profit",
+        "period": "FY2025",
+        "value": 14200000,
+        "currency": "AUD",
+        "unit": "currency_units",
+        "valueStatus": "audited",
+        "description": "Synthetic consolidated net profit after tax.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Build Systems 2025 annual report",
+            "sourceUrl": "https://example.com/investors/annual-report-2025.pdf",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "financial_report",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Pages 12, 38 and 72",
+            "excerpt": "FY2025 revenue was AUD 185 million and net profit was AUD 14.2 million.",
+            "note": "Synthetic audited financial evidence for field placement only."
+          }
+        ]
+      }
+    ],
+    "assessment": {
+      "grade": "verified_high_value",
+      "overallScore": 79,
+      "overallConclusion": "High-value lead with verified demand and procurement access; protect information because the same entity is also a confirmed competitor.",
+      "assessedOn": "2026-08-20",
+      "informationConfirmationRate": 92.5,
+      "dimensions": [
+        {
+          "name": "项目及城市价值",
+          "score": 13,
+          "maxScore": 15,
+          "level": "high",
+          "rationale": "Active Sydney high-rise project with repeated floors.",
+          "evidence": [
+            {
+              "sourceTitle": "Harbour Residence project page",
+              "sourceUrl": "https://example.com/projects/harbour-residence",
+              "publisher": "Example Build Systems Ltd.",
+              "sourceType": "official_website",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Project team and procurement",
+              "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+              "note": "Supports the named customer relationship and active procurement window."
+            }
+          ]
+        },
+        {
+          "name": "客户规模",
+          "score": 17,
+          "maxScore": 20,
+          "level": "high",
+          "rationale": "Audited revenue and headcount support a medium-to-large account.",
+          "evidence": [
+            {
+              "sourceTitle": "Example Build Systems 2025 annual report",
+              "sourceUrl": "https://example.com/investors/annual-report-2025.pdf",
+              "publisher": "Example Build Systems Ltd.",
+              "sourceType": "financial_report",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Pages 12, 38 and 72",
+              "excerpt": "FY2025 revenue was AUD 185 million and net profit was AUD 14.2 million.",
+              "note": "Synthetic audited financial evidence for field placement only."
+            }
+          ]
+        },
+        {
+          "name": "未来项目需求",
+          "score": 16,
+          "maxScore": 20,
+          "level": "high",
+          "rationale": "Inquiry and shortlist deadline confirm near-term demand.",
+          "evidence": [
+            {
+              "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+              "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+              "publisher": "Example Developments Pty Ltd.",
+              "sourceType": "customer_document",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Inquiry body and Attachment A",
+              "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+              "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+            }
+          ]
+        },
+        {
+          "name": "可触达性",
+          "score": 8,
+          "maxScore": 10,
+          "level": "high",
+          "rationale": "Named commercial director and direct business channels are verified.",
+          "evidence": [
+            {
+              "sourceTitle": "Example Build Systems official profile",
+              "sourceUrl": "https://example.com/company-profile",
+              "publisher": "Example Build Systems Ltd.",
+              "sourceType": "official_website",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Leadership team",
+              "excerpt": "Alex Example is Commercial Director.",
+              "note": "Current role and direct route."
+            }
+          ]
+        },
+        {
+          "name": "付款能力",
+          "score": 12,
+          "maxScore": 15,
+          "level": "medium_high",
+          "rationale": "Audited profitability supports capacity, while project payment allocation still requires confirmation.",
+          "evidence": [
+            {
+              "sourceTitle": "Example Build Systems 2025 annual report",
+              "sourceUrl": "https://example.com/investors/annual-report-2025.pdf",
+              "publisher": "Example Build Systems Ltd.",
+              "sourceType": "financial_report",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Pages 12, 38 and 72",
+              "excerpt": "FY2025 revenue was AUD 185 million and net profit was AUD 14.2 million.",
+              "note": "Synthetic audited financial evidence for field placement only."
+            }
+          ]
+        },
+        {
+          "name": "多产品适配",
+          "score": 13,
+          "maxScore": 20,
+          "level": "medium_high",
+          "rationale": "Project geometry fits aluminum formwork and climbing solutions, but competitor status narrows the safe offering.",
+          "evidence": [
+            {
+              "sourceTitle": "Example Aluminum Formwork product page",
+              "sourceUrl": "https://example.com/products/aluminum-formwork",
+              "publisher": "Example Build Systems Ltd.",
+              "sourceType": "official_website",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Product, manufacturing and factory section",
+              "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+              "note": "Supports overlapping product, brand control and own-factory manufacturing."
+            }
+          ]
+        }
+      ],
+      "capabilityContext": {
+        "foundationKey": "geto:capability-foundation",
+        "foundationVersion": "2026-08-19",
+        "asOf": "2026-08-20",
+        "status": "available",
+        "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "productCodes": [
+          "aluminum_formwork"
+        ],
+        "scenarioCodes": [
+          "high_rise_core_and_standard_floor"
+        ],
+        "roleCodes": [
+          "main_contractor"
+        ],
+        "caseKeys": [
+          "case:synthetic-harbour-residence"
+        ],
+        "gapCodes": [
+          "synthetic_reference_fixture"
+        ]
+      },
+      "evidence": [
+        {
+          "sourceTitle": "Example Registry extract",
+          "sourceUrl": "https://registry.example/companies/123456789",
+          "publisher": "Example Corporate Registry",
+          "sourceType": "registry",
+          "publishedOn": "2026-08-01",
+          "retrievedOn": "2026-08-20",
+          "locator": "Registration 123456789",
+          "excerpt": "Example Build Systems Ltd. is active and registered in Australia.",
+          "note": "Synthetic strong identity anchor for the reference fixture."
+        },
+        {
+          "sourceTitle": "Example Build Systems 2025 annual report",
+          "sourceUrl": "https://example.com/investors/annual-report-2025.pdf",
+          "publisher": "Example Build Systems Ltd.",
+          "sourceType": "financial_report",
+          "publishedOn": "2026-08-01",
+          "retrievedOn": "2026-08-20",
+          "locator": "Pages 12, 38 and 72",
+          "excerpt": "FY2025 revenue was AUD 185 million and net profit was AUD 14.2 million.",
+          "note": "Synthetic audited financial evidence for field placement only."
+        },
+        {
+          "sourceTitle": "Harbour Residence project page",
+          "sourceUrl": "https://example.com/projects/harbour-residence",
+          "publisher": "Example Build Systems Ltd.",
+          "sourceType": "official_website",
+          "publishedOn": "2026-08-01",
+          "retrievedOn": "2026-08-20",
+          "locator": "Project team and procurement",
+          "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+          "note": "Supports the named customer relationship and active procurement window."
+        },
+        {
+          "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+          "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+          "publisher": "Example Developments Pty Ltd.",
+          "sourceType": "customer_document",
+          "publishedOn": "2026-08-01",
+          "retrievedOn": "2026-08-20",
+          "locator": "Inquiry body and Attachment A",
+          "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+          "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+        }
+      ]
+    },
+    "competitorCustomerPortfolio": {
+      "assessmentType": "competitor_customer_portfolio",
+      "status": "completed",
+      "modelCode": "GETO_COMPETITOR_CUSTOMER_PORTFOLIO",
+      "modelVersion": "2026-08-19",
+      "customerValueModelCode": "GETO_LEAD_VALUE",
+      "asOf": "2026-08-20",
+      "verifiedCustomerCount": 1,
+      "scoredCustomerCount": 1,
+      "customerScoreCoverage": 1.0,
+      "averageCustomerValueScore": 82.0,
+      "customers": [
+        {
+          "companyName": "Example Developments Pty Ltd.",
+          "country": "Australia",
+          "relationshipCount": 1,
+          "customerAssessmentStatus": "completed",
+          "customerValueScore": 82.0,
+          "customerValueModelVersion": "2026-07-29",
+          "cohortBaselineVersion": "AU:developer:2026-08-20:sha256:cccccccccccccccc",
+          "assessedOn": "2026-08-20",
+          "evidence": [
+            {
+              "sourceTitle": "Harbour Residence project page",
+              "sourceUrl": "https://example.com/projects/harbour-residence",
+              "publisher": "Example Build Systems Ltd.",
+              "sourceType": "official_website",
+              "publishedOn": "2026-08-01",
+              "retrievedOn": "2026-08-20",
+              "locator": "Project team and procurement",
+              "excerpt": "Example Developments appointed Example Build Systems to deliver Harbour Residence.",
+              "note": "Supports the named customer relationship and active procurement window."
+            }
+          ]
+        }
+      ]
+    },
+    "researchStatus": "completed_with_gaps",
+    "lastResearchedOn": "2026-08-20",
+    "licensesAndCertifications": [
+      {
+        "name": "New South Wales unrestricted commercial builder licence",
+        "type": "builder_license",
+        "number": "NSW-EX-204812",
+        "holderName": "Example Build Systems Ltd.",
+        "issuer": "Example NSW Building Authority",
+        "jurisdiction": "AU-NSW",
+        "scope": "Commercial buildings without a synthetic project-value limit.",
+        "status": "active",
+        "validFrom": "2024-01-01",
+        "validUntil": "2027-12-31",
+        "evidence": [
+          {
+            "sourceTitle": "Example licence register",
+            "sourceUrl": "https://government.example/licenses/NSW-EX-204812",
+            "publisher": "Example NSW Building Authority",
+            "sourceType": "government",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Licence NSW-EX-204812",
+            "excerpt": "Licence is active through 2027-12-31.",
+            "note": "Licence and expiry verification."
+          }
+        ]
+      }
+    ],
+    "newsAndSocialMedia": [
+      {
+        "title": "Example Build Systems wins Harbour Residence contract",
+        "type": "company_news",
+        "publisherOrPlatform": "Example Build Systems Ltd.",
+        "publishedOn": "2025-02-01",
+        "url": "https://example.com/news/harbour-residence-award",
+        "summary": "Synthetic announcement confirms contract award, scope and delivery schedule.",
+        "sentiment": "neutral",
+        "relatedProject": "Harbour Residence",
+        "businessMeaning": "Confirms delivery backlog and the customer relationship.",
+        "evidence": [
+          {
+            "sourceTitle": "Harbour Residence project page",
+            "sourceUrl": "https://example.com/projects/harbour-residence",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Contract award",
+            "excerpt": "The company was awarded the Harbour Residence main contract.",
+            "note": "Award announcement."
+          }
+        ]
+      }
+    ],
+    "customsTransactions": [
+      {
+        "resultType": "shipment_summary",
+        "direction": "import",
+        "importer": "Example Build Systems Ltd.",
+        "exporter": "Example Fasteners Manufacturing Co.",
+        "partnerCountry": "China",
+        "transactionOn": "2026-06-18",
+        "dateRange": "2026-01-01/2026-06-30",
+        "hsCode": "731815",
+        "productDescription": "Steel fasteners for reusable formwork systems",
+        "quantity": 18500,
+        "quantityUnit": "kg",
+        "value": 96200,
+        "currency": "USD",
+        "recordCount": 3,
+        "provider": "Synthetic Customs Provider",
+        "queryScope": "Exact legal name plus AU country filter",
+        "verificationStatus": "matched_by_strong_identity",
+        "notes": "Supports imported component sourcing; does not refute own-factory panel manufacturing.",
+        "originPort": "Port of Shanghai",
+        "destinationPort": "Port Botany",
+        "evidence": [
+          {
+            "sourceTitle": "Synthetic customs result",
+            "sourceUrl": "https://provider.example/customs/example-build-systems",
+            "publisher": "Synthetic Customs Provider",
+            "sourceType": "provider",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Exact-name shipment group",
+            "excerpt": "Three shipments of steel fasteners matched the verified legal name.",
+            "note": "Provider observation accepted only for shipment fields."
+          }
+        ]
+      }
+    ],
+    "lawsuitsAndCompliance": [
+      {
+        "type": "court_case",
+        "title": "Synthetic payment dispute settled without an adverse judgment.",
+        "caseNumber": "NSWSC-2025-EX-104",
+        "authorityOrCourt": "Example Supreme Court of New South Wales",
+        "jurisdiction": "AU-NSW",
+        "parties": [
+          "Example Build Systems Ltd.",
+          "Example Materials Pty Ltd."
+        ],
+        "filedOn": "2025-11-12",
+        "status": "closed_settled",
+        "outcome": "Settlement recorded and proceeding closed.",
+        "amount": 420000,
+        "currency": "AUD",
+        "relatedProject": "Example Civic Centre",
+        "riskImpact": "Synthetic payment dispute settled without an adverse judgment.",
+        "evidence": [
+          {
+            "sourceTitle": "Synthetic court register",
+            "sourceUrl": "https://court.example/cases/NSWSC-2025-EX-104",
+            "publisher": "Example Supreme Court of New South Wales",
+            "sourceType": "court",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Docket outcome",
+            "excerpt": "Matter closed following settlement; no adverse judgment recorded.",
+            "note": "Case status and non-adverse outcome."
+          }
+        ]
+      }
+    ],
+    "inquiries": [
+      {
+        "receivedOn": "2026-08-18",
+        "buyerName": "Alex Example",
+        "buyerContact": "alex@example.com; +61 2 5550 0100",
+        "buyerRole": "Commercial Director",
+        "requestedProduct": "GETO aluminum formwork system",
+        "quantity": 12600,
+        "quantityUnit": "m2",
+        "technicalRequirements": "28 repeated floors, 3.0 m floor height, monolithic wall-slab casting, six-day cycle target.",
+        "projectName": "Harbour Residence",
+        "projectCountry": "Australia",
+        "deliveryDestination": "Sydney project site",
+        "deliveryPort": "Port Botany",
+        "signingEntity": "Example Build Systems Ltd.",
+        "payer": "Example Developments Pty Ltd. subject to final contract confirmation",
+        "paymentTerms": "20% advance, 70% before shipment, 10% after site acceptance; buyer requests negotiation.",
+        "requestedDocuments": [
+          "technical proposal",
+          "cycle-time plan",
+          "quotation",
+          "factory QA certificate"
+        ],
+        "attachments": [
+          "WEB-2026-001-Attachment-A.pdf",
+          "Harbour-Residence-Typical-Floor.dwg"
+        ],
+        "verificationStatus": "partially_verified",
+        "openQuestions": [
+          "Confirm final payer and signing entity.",
+          "Confirm crane capacity and floor zoning.",
+          "Confirm whether panels are purchased or rented."
+        ],
+        "evidence": [
+          {
+            "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+            "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+            "publisher": "Example Developments Pty Ltd.",
+            "sourceType": "customer_document",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Inquiry body and Attachment A",
+            "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+            "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+          }
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "category": "commercial_and_competitive",
+        "level": "medium",
+        "finding": "The target owns a competing system while also opening an alternative supplier window.",
+        "impact": "Technical and commercial information could strengthen a direct competitor if shared without controls.",
+        "blocking": false,
+        "mitigation": "Separate project-specific supply opportunity from strategic competitor exposure and protect technical pricing data.",
+        "evidence": [
+          {
+            "sourceTitle": "Example Aluminum Formwork product page",
+            "sourceUrl": "https://example.com/products/aluminum-formwork",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Product, manufacturing and factory section",
+            "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+            "note": "Supports overlapping product, brand control and own-factory manufacturing."
+          },
+          {
+            "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+            "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+            "publisher": "Example Developments Pty Ltd.",
+            "sourceType": "customer_document",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Inquiry body and Attachment A",
+            "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+            "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+          }
+        ]
+      }
+    ],
+    "missingInformation": [
+      {
+        "topic": "private_project_cost_breakdown",
+        "status": "limited_public_access",
+        "description": "Detailed project cost plan and incumbent unit prices are private.",
+        "whyItMatters": "Margin comparison and final bid strategy require buyer clarification.",
+        "checkedScope": "Inquiry attachment, public project page and published financial statement.",
+        "recommendedAction": "Request the buyer's package budget range and incumbent comparison basis under NDA.",
+        "evidence": [
+          {
+            "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+            "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+            "publisher": "Example Developments Pty Ltd.",
+            "sourceType": "customer_document",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Inquiry body and Attachment A",
+            "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+            "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+          }
+        ]
+      }
+    ],
+    "recommendedActions": [
+      {
+        "action": "Hold a technical-commercial clarification call and issue a controlled budget quotation.",
+        "priority": "high",
+        "owner": "GETO Australia sales lead",
+        "timing": "Before 2026-09-01",
+        "reason": "The shortlist deadline is near and the buyer, payer, scope and information boundary need confirmation.",
+        "evidence": [
+          {
+            "sourceTitle": "Inquiry WEB-2026-001 and technical attachment",
+            "sourceUrl": "https://example.com/customer-documents/WEB-2026-001",
+            "publisher": "Example Developments Pty Ltd.",
+            "sourceType": "customer_document",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Inquiry body and Attachment A",
+            "excerpt": "The buyer requests aluminum formwork for 28 repeated floors, 12,600 m², CIF Sydney.",
+            "note": "Supports the buyer-stated requirement, not legal identity or payment capacity."
+          },
+          {
+            "sourceTitle": "Example Aluminum Formwork product page",
+            "sourceUrl": "https://example.com/products/aluminum-formwork",
+            "publisher": "Example Build Systems Ltd.",
+            "sourceType": "official_website",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Product, manufacturing and factory section",
+            "excerpt": "The company owns the EX-Alu brand and manufactures panels at its Newcastle factory.",
+            "note": "Supports overlapping product, brand control and own-factory manufacturing."
+          }
+        ]
+      }
+    ],
+    "additionalInformation": [
+      {
+        "topic": "synthetic_fixture_notice",
+        "title": "Complete reference fixture",
+        "details": "Every value in this file is synthetic and exists to demonstrate field placement, Evidence nesting and assessment linkage.",
+        "evidence": [
+          {
+            "sourceTitle": "Fixture documentation",
+            "sourceUrl": "https://example.com/reference-fixture",
+            "publisher": "GETO Skill Maintainers",
+            "sourceType": "other",
+            "publishedOn": "2026-08-01",
+            "retrievedOn": "2026-08-20",
+            "locator": "Usage notice",
+            "excerpt": "This is a synthetic reference fixture and not a real company report.",
+            "note": "Prevents synthetic values from being treated as research facts."
+          }
+        ]
+      }
+    ]
+  },
+  "scoringCriteriaHash": "94baa4c6bed47d2c180e026fc6e1db7c334eabb56417abc20960184a986cc8a6"
+}

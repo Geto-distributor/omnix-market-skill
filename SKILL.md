@@ -55,7 +55,7 @@ python scripts/omnix_market.py request DELETE '/api/market-intelligence/companie
 python scripts/omnix_market.py request POST '/api/market-intelligence/companies/company-key:restore' --body restore.json --confirm-restore
 ```
 
-完整投影示例见 [upload-example.md](references/upload-example.md)。method、path、请求体与枚举必须通过本次 OpenAPI 校验。
+投影说明见 [upload-example.md](references/upload-example.md)，全字段 JSON 见 [company-aggregate-example.json](references/company-aggregate-example.json)。method、path、请求体与枚举必须通过本次 OpenAPI 校验。
 
 ## 标准流程
 

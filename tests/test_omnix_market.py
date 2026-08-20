@@ -113,6 +113,35 @@ def aggregate_body(visibility: str = "private", classifications=None) -> dict:
 
 
 class OpenApiContractTests(unittest.TestCase):
+    def test_complete_aggregate_example_matches_schema_and_has_no_empty_values(self) -> None:
+        value = json.loads(
+            (ROOT / "references/company-aggregate-example.json").read_text(encoding="utf-8")
+        )
+        operation = CLIENT.operation_definition(SPEC, "/api/market-intelligence/companies", "POST")
+        errors = CLIENT.validate_json_schema(
+            value, CLIENT.request_schema(SPEC, operation), SPEC
+        )
+        self.assertEqual(errors, [])
+
+        def empty_paths(node: object, path: str = "$") -> list[str]:
+            if node is None or node == "" or node == [] or node == {}:
+                return [path]
+            if isinstance(node, dict):
+                return [
+                    item
+                    for key, child in node.items()
+                    for item in empty_paths(child, f"{path}.{key}")
+                ]
+            if isinstance(node, list):
+                return [
+                    item
+                    for index, child in enumerate(node)
+                    for item in empty_paths(child, f"{path}[{index}]")
+                ]
+            return []
+
+        self.assertEqual(empty_paths(value), [])
+
     def test_runtime_docs_read_as_a_current_contract(self) -> None:
         forbidden = (
             "ResearchDelta", "Draft/Approval", "Submit/Reject", "ETag",

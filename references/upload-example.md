@@ -1,65 +1,16 @@
 # Company Aggregate 投影示例
 
+## 完整参考工件
+
+[company-aggregate-example.json](company-aggregate-example.json) 是可通过当前 OpenAPI request schema 的完整合成请求。每个 Company Content 列表都有至少一个业务 item，项目、关系、联系人和 Evidence 也全部带有实际示例值；同一 Company 同时展示 confirmed lead、confirmed competitor、完成态六维 assessment、Capability Context、verified_customer 关系、0–5 切入分和 competitorCustomerPortfolio。
+
+该 JSON 全部为合成数据，仅用于理解 DTO、枚举、Evidence 嵌套和本地到平台的字段映射。实际上传工件由本次 ResearchBundle 和运行时 OpenAPI 生成。
+
 ## 本地输入
 
-使用已通过 GETO workspace validator 的 `company.json`。其中至少包含：
+本地完整输入读取 `$geto-run-market-research/references/company-json-example.json`。它覆盖 ResearchBundle 主合同的全部顶层资源、三个本地评估对象和所有 Company 子资源字段。
 
-```json
-{
-  "company": {
-    "companyName": "Example Build Systems Ltd.",
-    "entityType": "operating_company",
-    "country": "Australia",
-    "countryCode": "AU"
-  },
-  "registrations": [{
-    "registrationNumber": "123456789",
-    "jurisdiction": "AU",
-    "status": "active",
-    "verificationStatus": "verified",
-    "evidence": []
-  }],
-  "projects": [{
-    "projectName": "Harbour Residence",
-    "participants": [{
-      "name": "Example Developments Pty Ltd.",
-      "role": "developer",
-      "identity": {"primaryDomain": "example-developments.test"},
-      "status": "confirmed",
-      "lastVerifiedOn": "2026-08-20",
-      "evidence": []
-    }],
-    "evidence": []
-  }],
-  "relationships": [{
-    "counterpartyName": "Example Developments Pty Ltd.",
-    "relationshipType": "customer",
-    "limitations": ["Buyer and payer remain unverified."],
-    "exclusivity": {
-      "status": "unknown",
-      "scope": null,
-      "description": null,
-      "lastVerifiedOn": null,
-      "evidence": []
-    },
-    "evidence": []
-  }],
-  "assessment": {
-    "status": "completed",
-    "capabilityContext": {"foundationKey": "geto:capability-foundation"}
-  },
-  "competitorCustomerPortfolio": {"status": "not_requested"},
-  "inquiryAssessment": {"status": "not_requested"},
-  "researchQueries": [],
-  "reportFiles": [],
-  "researchStatus": "completed_with_gaps",
-  "lastResearchedOn": "2026-08-20"
-}
-```
-
-实际业务 item 使用完整 Evidence。上面的空 Evidence 只用于突出投影字段位置。
-
-## 生成投影
+## 生成真实投影
 
 ```bash
 python scripts/omnix_market.py prepare-upload \
@@ -68,35 +19,21 @@ python scripts/omnix_market.py prepare-upload \
   --output '<临时目录>/upload.json'
 ```
 
-生成结果包含：
+`prepare-upload` 根据本次运行时 OpenAPI 完成 DTO 校验；投影包含 lead 时，从 `GET /api/market-intelligence/scoring-criteria` 取得当前 hash 并写入请求。
 
-```json
-{
-  "identity": {
-    "entityKind": "operating_company",
-    "jurisdiction": "AU",
-    "registrationNumber": "123456789"
-  },
-  "visibility": "private",
-  "marketCode": "AU",
-  "scopeCode": "construction_formwork",
-  "asOf": "2026-08-20",
-  "lastVerifiedOn": "2026-08-20",
-  "content": {
-    "company": {},
-    "projects": [],
-    "relationships": [],
-    "assessment": {},
-    "competitorCustomerPortfolio": {},
-    "researchStatus": "completed_with_gaps",
-    "lastResearchedOn": "2026-08-20"
-  }
-}
+维护完整合成示例时可运行：
+
+```bash
+python scripts/generate_company_aggregate_example.py \
+  '<geto-run-market-research>/references/company-json-example.json' \
+  --openapi tests/fixtures/company-aggregate-openapi.json \
+  --scoring-criteria-hash '<当前平台 hash>' \
+  --output references/company-aggregate-example.json
 ```
 
-inquiryAssessment、researchQueries 和 reportFiles 留在本地。投影包含 lead 时，客户端从 scoring-criteria 读取并注入 scoringCriteriaHash。
+生成器同时检查 OpenAPI schema 和空值；示例中的 hash 对应其标注的 API 合同基线，业务上传仍由 `prepare-upload` 动态取得。
 
-常见本地字段在生成结果中使用 API 名称：
+## 主要字段映射
 
 | 本地 company.json | Company Aggregate |
 | --- | --- |
@@ -110,3 +47,5 @@ inquiryAssessment、researchQueries 和 reportFiles 留在本地。投影包含 
 | relationships[].cooperationModeCode | relationships[].cooperationMode |
 | relationships[].cooperationDepthCode | relationships[].cooperationDepth |
 | assessment.dimensions[].finalDimensionScore | assessment.dimensions[].score |
+
+`inquiryAssessment`、`researchQueries`、`reportFiles`、报告、来源索引和进度文件属于本地 ResearchBundle。
