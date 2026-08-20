@@ -11,6 +11,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ MARKET_ROOT = "/api/market-intelligence"
 ALLOWED_OPERATIONS = {
     ("GET", f"{MARKET_ROOT}/companies"),
     ("GET", f"{MARKET_ROOT}/companies/{{companyKey}}"),
+    ("GET", f"{MARKET_ROOT}/scoring-criteria"),
     ("POST", f"{MARKET_ROOT}/companies:resolve"),
     ("POST", f"{MARKET_ROOT}/companies"),
     ("PUT", f"{MARKET_ROOT}/companies/{{companyKey}}"),
@@ -27,6 +29,18 @@ ALLOWED_OPERATIONS = {
     ("POST", f"{MARKET_ROOT}/companies/{{companyKey}}:restore"),
 }
 REQUIRED_OPERATIONS = ALLOWED_OPERATIONS
+CONTENT_FIELDS = {
+    "company", "aliases", "registrations", "capitalRecords", "websites", "addresses",
+    "marketPresence", "socialChannels", "researchClassifications", "companyRoles",
+    "productsAndServices", "projects", "relationships", "contacts",
+    "licensesAndCertifications", "financialRecords", "newsAndSocialMedia",
+    "customsTransactions", "lawsuitsAndCompliance", "inquiries", "risks", "assessment",
+    "competitorCustomerPortfolio", "missingInformation", "recommendedActions",
+    "additionalInformation", "researchStatus", "lastResearchedOn",
+}
+LOCAL_ONLY_FIELDS = {"inquiryAssessment", "researchQueries", "reportFiles"}
+ENTITY_KINDS = {"legal_entity", "operating_company", "corporate_group"}
+SCOPE_CODES = {"construction_formwork"}
 
 
 class ClientError(ValueError):
@@ -161,6 +175,48 @@ def response_schema(spec: dict[str, Any], operation: dict[str, Any], status: int
     return schema if isinstance(schema, dict) else None
 
 
+def schema_property(spec: dict[str, Any], schema: Any, name: str) -> dict[str, Any] | None:
+    schema = resolve_object(spec, schema)
+    properties = schema.get("properties") if isinstance(schema, dict) else None
+    child = properties.get(name) if isinstance(properties, dict) else None
+    child = resolve_object(spec, child)
+    return child if isinstance(child, dict) else None
+
+
+def array_item_schema(spec: dict[str, Any], schema: Any) -> dict[str, Any] | None:
+    schema = resolve_object(spec, schema)
+    child = resolve_object(spec, schema.get("items")) if isinstance(schema, dict) else None
+    return child if isinstance(child, dict) else None
+
+
+def aggregate_contract_gaps(spec: dict[str, Any]) -> list[str]:
+    try:
+        operation = operation_definition(spec, f"{MARKET_ROOT}/companies", "POST")
+        root = request_schema(spec, operation)
+        content = schema_property(spec, root, "content")
+        assessment = schema_property(spec, content, "assessment")
+        projects = array_item_schema(spec, schema_property(spec, content, "projects"))
+        relationships = array_item_schema(spec, schema_property(spec, content, "relationships"))
+        checks = {
+            "content.competitorCustomerPortfolio": schema_property(spec, content, "competitorCustomerPortfolio"),
+            "content.assessment.capabilityContext": schema_property(spec, assessment, "capabilityContext"),
+            "content.projects[].participants": schema_property(spec, projects, "participants"),
+            "content.relationships[].exclusivity": schema_property(spec, relationships, "exclusivity"),
+        }
+    except ValueError:
+        return ["Company Aggregate request schema"]
+    gaps = [name for name, schema in checks.items() if schema is None]
+    schemas = spec.get("components", {}).get("schemas", {})
+    for name, schema in (schemas.items() if isinstance(schemas, dict) else []):
+        if "evidence" not in str(name).casefold():
+            continue
+        resolved = resolve_object(spec, schema)
+        properties = resolved.get("properties") if isinstance(resolved, dict) else None
+        if isinstance(properties, dict) and "relation" in properties:
+            gaps.append(f"components.schemas.{name}.relation")
+    return sorted(gaps)
+
+
 def json_type_matches(value: Any, expected: str) -> bool:
     return {
         "object": isinstance(value, dict), "array": isinstance(value, list),
@@ -236,6 +292,154 @@ def read_body(path: str | None) -> tuple[Any | None, bytes | None]:
     return value, json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
+def encoded_body(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def is_lead(content: dict[str, Any]) -> bool:
+    return any(
+        isinstance(item, dict)
+        and str(item.get("classification") or "").casefold() == "lead"
+        and str(item.get("status") or "").casefold() != "rejected"
+        for item in content.get("researchClassifications", [])
+    )
+
+
+def strong_identity(identity: Any) -> bool:
+    if not isinstance(identity, dict) or identity.get("entityKind") not in ENTITY_KINDS:
+        return False
+    jurisdiction = str(identity.get("jurisdiction") or "").strip()
+    return bool(
+        str(identity.get("primaryDomain") or "").strip()
+        or jurisdiction and str(identity.get("registrationNumber") or "").strip()
+        or jurisdiction and str(identity.get("otherLegalId") or "").strip()
+    )
+
+
+def identity_from_company(value: dict[str, Any]) -> dict[str, Any]:
+    company = value.get("company")
+    if not isinstance(company, dict):
+        raise ValueError("company.json requires company")
+    if value.get("researchStatus") == "identity_conflict":
+        raise ValueError("identity_conflict Company is not uploadable")
+    identity: dict[str, Any] = {"entityKind": company.get("entityType")}
+    registrations = [item for item in value.get("registrations", []) if isinstance(item, dict)]
+    verified = [item for item in registrations if item.get("verificationStatus") in {"verified", "confirmed"}]
+    candidates = verified or [item for item in registrations if item.get("status") == "active"]
+    for item in candidates:
+        number = str(item.get("registrationNumber") or "").strip()
+        jurisdiction = str(item.get("jurisdiction") or company.get("countryCode") or "").strip()
+        if number and jurisdiction:
+            identity["jurisdiction"] = jurisdiction.upper()
+            identity["registrationNumber"] = number
+            break
+    websites = [item for item in value.get("websites", []) if isinstance(item, dict)]
+    for item in websites:
+        if item.get("websiteType") != "official" or item.get("verificationStatus") not in {"verified", "confirmed"}:
+            continue
+        url = str(item.get("url") or "").strip()
+        parsed = urllib.parse.urlparse(url if "://" in url else f"https://{url}")
+        if parsed.hostname:
+            identity["primaryDomain"] = parsed.hostname.removeprefix("www.").lower()
+            break
+    if not strong_identity(identity):
+        raise ValueError("a verified registration identity or official primary domain is required for upload")
+    return identity
+
+
+def latest_verified_on(value: Any) -> str | None:
+    dates: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == "lastVerifiedOn" and isinstance(child, str):
+                try:
+                    datetime.strptime(child, "%Y-%m-%d")
+                    dates.append(child)
+                except ValueError:
+                    pass
+            else:
+                nested = latest_verified_on(child)
+                if nested:
+                    dates.append(nested)
+    elif isinstance(value, list):
+        for child in value:
+            nested = latest_verified_on(child)
+            if nested:
+                dates.append(nested)
+    return max(dates) if dates else None
+
+
+def project_company(value: dict[str, Any], visibility: str, as_of: str | None,
+                    market_code: str | None, scope_code: str) -> dict[str, Any]:
+    if visibility not in {"private", "public"}:
+        raise ValueError("visibility must be private or public")
+    company = value.get("company")
+    if not isinstance(company, dict):
+        raise ValueError("company.json requires company")
+    code = str(market_code or company.get("countryCode") or "").upper()
+    if not re.fullmatch(r"[A-Z]{2}", code):
+        raise ValueError("marketCode must be an ISO 3166-1 alpha-2 code")
+    if scope_code not in SCOPE_CODES:
+        raise ValueError(f"scopeCode must be one of {sorted(SCOPE_CODES)}")
+    snapshot = as_of or value.get("lastResearchedOn")
+    try:
+        datetime.strptime(str(snapshot), "%Y-%m-%d")
+    except ValueError as error:
+        raise ValueError("asOf must use YYYY-MM-DD") from error
+    unexpected = sorted(set(value) - CONTENT_FIELDS - LOCAL_ONLY_FIELDS)
+    if unexpected:
+        raise ValueError("company.json has unsupported top-level fields: " + ", ".join(unexpected))
+    content = {field: value[field] for field in CONTENT_FIELDS if field in value}
+    for field in ("company", "assessment", "competitorCustomerPortfolio", "researchStatus", "lastResearchedOn"):
+        if field not in content:
+            raise ValueError(f"company.json requires {field}")
+    return {
+        "identity": identity_from_company(value),
+        "visibility": visibility,
+        "marketCode": code,
+        "scopeCode": scope_code,
+        "asOf": snapshot,
+        "lastVerifiedOn": latest_verified_on(value),
+        "content": content,
+    }
+
+
+def fetch_scoring_hash(base: str, key: str, spec: dict[str, Any], timeout: float) -> str:
+    path = f"{MARKET_ROOT}/scoring-criteria"
+    template = resolve_operation(spec, "GET", path)
+    operation = operation_definition(spec, template, "GET")
+    request = urllib.request.Request(f"{base}{path}", headers={"Accept": "application/json", "X-API-KEY": key})
+    with opener().open(request, timeout=timeout) as response:
+        body = parse_body(response.read().decode("utf-8", errors="replace"))
+        errors = validate_json_schema(body, response_schema(spec, operation, response.status), spec) \
+            if response_schema(spec, operation, response.status) is not None else []
+    if errors:
+        raise ValueError("scoring criteria response violates OpenAPI schema: " + "; ".join(errors))
+    value = nested_value(body, "hash")
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", value):
+        raise ValueError("scoring criteria response requires a SHA-256 hash")
+    return value.lower()
+
+
+def inject_scoring_hash(body: Any, base: str, key: str, spec: dict[str, Any], timeout: float) -> Any:
+    if not isinstance(body, dict) or not isinstance(body.get("content"), dict):
+        raise ValueError("Company Aggregate request requires content")
+    if not strong_identity(body.get("identity")):
+        raise ValueError("Company Aggregate upload requires a strong identity")
+    if is_lead(body["content"]):
+        body["scoringCriteriaHash"] = fetch_scoring_hash(base, key, spec, timeout)
+    else:
+        body.pop("scoringCriteriaHash", None)
+    return body
+
+
+def atomic_write_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
 def nested_value(value: Any, key: str) -> Any:
     if isinstance(value, dict):
         if key in value:
@@ -268,12 +472,38 @@ def is_public_duplicate(body: Any) -> bool:
 
 def command_capabilities(_: argparse.Namespace) -> int:
     _, _, spec_url = config()
-    operations = available_operations(load_openapi(spec_url))
+    spec = load_openapi(spec_url)
+    operations = available_operations(spec)
     actual = {(item["method"], item["path"]) for item in operations}
     missing = sorted([f"{method} {path}" for method, path in REQUIRED_OPERATIONS - actual])
-    status = "available" if not missing else ("partial" if operations else "upstream_unavailable")
-    print(json.dumps({"provider": "omnix-market", "status": status, "operations": operations, "missingRequiredOperations": missing}, ensure_ascii=False, indent=2))
-    return 0 if not missing else 1
+    contract_gaps = aggregate_contract_gaps(spec) if not missing else []
+    status = "available" if not missing and not contract_gaps else ("partial" if operations else "upstream_unavailable")
+    print(json.dumps({
+        "provider": "omnix-market", "status": status, "operations": operations,
+        "missingRequiredOperations": missing, "missingAggregateContractFields": contract_gaps,
+    }, ensure_ascii=False, indent=2))
+    return 0 if status == "available" else 1
+
+
+def command_prepare_upload(args: argparse.Namespace) -> int:
+    base, key, spec_url = config()
+    spec = load_openapi(spec_url)
+    value = json.loads(Path(args.company_json).expanduser().resolve().read_text(encoding="utf-8"))
+    body = project_company(value, args.visibility, args.as_of, args.market_code, args.scope_code)
+    body = inject_scoring_hash(body, base, key, spec, args.timeout)
+    operation = operation_definition(spec, f"{MARKET_ROOT}/companies", "POST")
+    schema = request_schema(spec, operation)
+    errors = validate_json_schema(body, schema, spec) if schema is not None else []
+    if errors:
+        raise ValueError("Company Aggregate projection violates OpenAPI schema: " + "; ".join(errors))
+    output = Path(args.output).expanduser().resolve()
+    atomic_write_json(output, body)
+    print(json.dumps({
+        "provider": "omnix-market", "status": "prepared", "output": str(output),
+        "visibility": body["visibility"], "marketCode": body["marketCode"],
+        "scopeCode": body["scopeCode"], "hasScoringCriteriaHash": "scoringCriteriaHash" in body,
+    }, ensure_ascii=False, indent=2))
+    return 0
 
 
 def command_request(args: argparse.Namespace) -> int:
@@ -289,6 +519,7 @@ def command_request(args: argparse.Namespace) -> int:
     if query_errors:
         raise ValueError("; ".join(query_errors))
     is_create = method == "POST" and template == f"{MARKET_ROOT}/companies"
+    is_replace = method == "PUT" and template == f"{MARKET_ROOT}/companies/{{companyKey}}"
     is_restore = method == "POST" and template.endswith(":restore")
     if is_create and not args.idempotency_key:
         raise ValueError("Company create requires --idempotency-key")
@@ -299,6 +530,9 @@ def command_request(args: argparse.Namespace) -> int:
     body, data = read_body(args.body)
     if method in {"POST", "PUT", "PATCH"} and data is None:
         raise ValueError(f"{method} requires --body")
+    if is_create or is_replace:
+        body = inject_scoring_hash(body, base, key, spec, args.timeout)
+        data = encoded_body(body)
     schema = request_schema(spec, operation)
     if body is not None and schema is not None:
         schema_errors = validate_json_schema(body, schema, spec)
@@ -350,6 +584,15 @@ def build_parser() -> argparse.ArgumentParser:
     sub = root.add_subparsers(dest="command", required=True)
     capabilities = sub.add_parser("capabilities")
     capabilities.set_defaults(func=command_capabilities)
+    prepare = sub.add_parser("prepare-upload")
+    prepare.add_argument("company_json")
+    prepare.add_argument("--visibility", choices=("private", "public"), required=True)
+    prepare.add_argument("--output", required=True)
+    prepare.add_argument("--as-of")
+    prepare.add_argument("--market-code")
+    prepare.add_argument("--scope-code", choices=tuple(sorted(SCOPE_CODES)), default="construction_formwork")
+    prepare.add_argument("--timeout", type=float, default=30)
+    prepare.set_defaults(func=command_prepare_upload)
     request = sub.add_parser("request")
     request.add_argument("method", choices=("GET", "POST", "PUT", "PATCH", "DELETE"))
     request.add_argument("path")

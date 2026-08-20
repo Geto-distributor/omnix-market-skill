@@ -30,6 +30,7 @@ Key 不得进入 company.json、progress.md、报告、日志、来源或命令�
 ```text
 GET    /api/market-intelligence/companies
 GET    /api/market-intelligence/companies/{companyKey}
+GET    /api/market-intelligence/scoring-criteria
 POST   /api/market-intelligence/companies:resolve
 POST   /api/market-intelligence/companies
 PUT    /api/market-intelligence/companies/{companyKey}
@@ -44,6 +45,8 @@ POST   /api/market-intelligence/companies/{companyKey}:restore
 
 ```bash
 python scripts/omnix_market.py capabilities
+python scripts/omnix_market.py prepare-upload '<公司目录>/company.json' \
+  --visibility private --output '<临时目录>/upload.json'
 python scripts/omnix_market.py request POST '/api/market-intelligence/companies:resolve' --body identity.json
 python scripts/omnix_market.py request POST '/api/market-intelligence/companies' --body upload.json --idempotency-key stable-key
 python scripts/omnix_market.py request PUT '/api/market-intelligence/companies/company-key' --body upload.json
@@ -52,13 +55,13 @@ python scripts/omnix_market.py request DELETE '/api/market-intelligence/companie
 python scripts/omnix_market.py request POST '/api/market-intelligence/companies/company-key:restore' --body restore.json --confirm-restore
 ```
 
-示例只说明调用形态；method、path、请求体与枚举必须通过本次 OpenAPI 校验。
+完整投影示例见 [upload-example.md](references/upload-example.md)。method、path、请求体与枚举必须通过本次 OpenAPI 校验。
 
 ## 标准流程
 
 ### 1. 本地门禁
 
-确认国家 `progress.md`、公司 `company.json`、`report.md` 和 `Sources/sources.md` 已通过本地验证。ERROR 阻止上传；WARNING 必须显式保留。上传完整 Company Aggregate。
+确认国家 `progress.md`、公司 `company.json`、`report.md` 和 `Sources/sources.md` 已通过本地验证。ERROR 阻止上传；WARNING 必须显式保留。本地 ResearchBundle 是事实主合同，Company Aggregate 是其中可共享业务字段的投影。
 
 ### 2. Capability check
 
@@ -66,23 +69,25 @@ python scripts/omnix_market.py request POST '/api/market-intelligence/companies/
 
 ### 3. 强身份 resolve
 
-按法定注册号、已确认稳定官网域名等强锚点调用 `companies:resolve`。legal_entity、operating_company、corporate_group 分别解析。ambiguous/identity conflict 时停止自动写入。
+按法定注册号、已确认稳定官网域名等强锚点调用 `companies:resolve`。legal_entity、operating_company、corporate_group 分别解析。private 与 public 都要求强身份；ambiguous/identity conflict 时停止写入。researchClassifications.status=possible 只表达业务分类状态。
 
 ### 4. 创建或更新完整聚合
 
-读取 OpenAPI Company Aggregate request schema，把 company.json 业务字段和用户选择的 visibility 映射为完整请求。保留同一 Company 的 lead 与 competitor 两条 researchClassifications；保留 productsAndServices 的 commercialRoles、manufacturingStatus 和内嵌 Evidence。
+先运行 `prepare-upload`。它把 company.json 投影为 OpenAPI 请求：marketCode 使用公司 ISO2 countryCode，scopeCode 使用 construction_formwork；保留同一 Company 的 lead 与 competitor 两条 researchClassifications、项目 participants、关系 exclusivity、competitorCustomerPortfolio、assessment.capabilityContext 和内嵌 Evidence。inquiryAssessment、researchQueries、reportFiles、报告与本地路径留在 ResearchBundle。
 
-resolve 匹配当前用户已有 Company 时 update；不存在时 create。已存在其他用户 public 强身份时，将本次保持或上传为 private，并返回 `blocked_public_duplicate`，不能拆分项目、联系人或证据绕过聚合根。
+投影包含 lead 时，客户端读取 `scoring-criteria` 的平台 hash 并注入请求；用户和 company.json 不维护该字段。平台口径与本地 assessment 不一致时停止上传。
+
+resolve 匹配当前用户已有 Company 时 update；不存在时 create。已存在其他用户 public 强身份时返回 `blocked_public_duplicate`，由用户决定后续处理。聚合根整体包含项目、联系人、关系和 Evidence。
 
 ### 5. 回读与记录
 
-校验服务端响应，返回 `uploadStatus=uploaded_private|uploaded_public|blocked_public_duplicate|failed`、服务端 Company Key、visibility 和 detailRoute。只把 uploadStatus 与 detailRoute 写入 progress.md；平台 Key 不回写 company.json。
+校验服务端响应，返回 `uploadStatus=uploaded_private|uploaded_public|blocked_public_duplicate|failed`、服务端 Company Key、visibility 和 detailRoute。创建或更新可把 uploadStatus 与 detailRoute 写入 progress.md；平台 Key 不回写 company.json。
 
 ## 其他 CRUD
 
 - private/public 是普通 PATCH/PUT 更新；public 表示认证且有 Market 读取权限的用户可见，不是匿名互联网公开。
-- DELETE 是软删除，必须有用户明确意图并使用 `--confirm-delete`。
-- restore 必须有用户明确意图并使用 `--confirm-restore`；服务端重新检查 public 强身份唯一性。
+- DELETE 是软删除，必须有用户明确意图并使用 `--confirm-delete`；结果只在当前任务回传。
+- restore 必须有用户明确意图并使用 `--confirm-restore`；服务端重新检查 public 强身份唯一性，结果只在当前任务回传。
 - 普通用户只操作自己拥有的数据；Admin 能力由服务端 principal 决定，客户端不传 ownerUserId。
 
 详细映射见 [company-aggregate.md](references/company-aggregate.md)，错误处理见 [error-contract.md](references/error-contract.md)。

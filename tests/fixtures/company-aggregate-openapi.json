@@ -2,27 +2,28 @@
   "openapi": "3.0.1",
   "paths": {
     "/api/market-intelligence/companies": {
-      "get": {
-        "operationId": "ListCompanies",
-        "responses": {"200": {"content": {"application/json": {"schema": {"type": "object"}}}}}
-      },
-      "post": {
-        "operationId": "CreateCompany",
-        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyRequest"}}}},
-        "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyResponse"}}}}}
-      }
+      "get": {"operationId": "ListCompanies", "responses": {"200": {"content": {"application/json": {"schema": {"type": "object"}}}}}},
+      "post": {"operationId": "CreateCompany", "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyRequest"}}}}, "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyResponse"}}}}}}
+    },
+    "/api/market-intelligence/scoring-criteria": {
+      "get": {"operationId": "GetScoringCriteria", "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ScoringCriteriaResponse"}}}}}}
     },
     "/api/market-intelligence/companies:resolve": {
       "post": {
         "operationId": "ResolveCompany",
-        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "required": ["entityKind"], "properties": {"entityKind": {"type": "string"}, "registrationNumber": {"type": "string"}, "domain": {"type": "string"}}, "additionalProperties": false}}}},
+        "requestBody": {"content": {"application/json": {"schema": {
+          "type": "object",
+          "required": ["identity"],
+          "properties": {"identity": {"$ref": "#/components/schemas/Identity"}, "companyName": {"type": "string"}, "country": {"type": "string"}},
+          "additionalProperties": false
+        }}}},
         "responses": {"200": {"content": {"application/json": {"schema": {"type": "object"}}}}}
       }
     },
     "/api/market-intelligence/companies/{companyKey}": {
       "get": {"operationId": "GetCompany", "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyResponse"}}}}}},
       "put": {"operationId": "UpdateCompany", "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyRequest"}}}}, "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyResponse"}}}}}},
-      "patch": {"operationId": "PatchCompany", "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"visibility": {"type": "string", "enum": ["private", "public"]}}, "additionalProperties": false}}}}, "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyResponse"}}}}}},
+      "patch": {"operationId": "PatchCompany", "requestBody": {"content": {"application/json": {"schema": {"type": "object", "required": ["visibility"], "properties": {"visibility": {"type": "string", "enum": ["private", "public"]}}, "additionalProperties": false}}}}, "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompanyResponse"}}}}}},
       "delete": {"operationId": "DeleteCompany", "responses": {"200": {"content": {"application/json": {"schema": {"type": "object"}}}}}}
     },
     "/api/market-intelligence/companies/{companyKey}:restore": {
@@ -31,25 +32,140 @@
   },
   "components": {
     "schemas": {
-      "CompanyRequest": {
+      "Identity": {
         "type": "object",
-        "required": ["company", "visibility"],
+        "required": ["entityKind"],
+        "properties": {
+          "entityKind": {"type": "string", "enum": ["legal_entity", "operating_company", "corporate_group"]},
+          "jurisdiction": {"type": "string"},
+          "registrationNumber": {"type": "string"},
+          "primaryDomain": {"type": "string"},
+          "otherLegalId": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "Evidence": {
+        "type": "object",
+        "required": ["sourceTitle", "sourceUrl", "sourceType", "retrievedOn"],
+        "properties": {
+          "sourceTitle": {"type": "string"}, "sourceUrl": {"type": "string"},
+          "publisher": {"type": "string", "nullable": true}, "sourceType": {"type": "string"},
+          "publishedOn": {"type": "string", "nullable": true}, "retrievedOn": {"type": "string"},
+          "locator": {"type": "string", "nullable": true}, "excerpt": {"type": "string", "nullable": true},
+          "note": {"type": "string", "nullable": true},
+          "verificationScope": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "EvidenceBackedObject": {
+        "type": "object",
+        "properties": {"evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}},
+        "additionalProperties": true
+      },
+      "ProjectParticipant": {
+        "type": "object",
+        "required": ["name", "role", "status", "evidence"],
+        "properties": {
+          "name": {"type": "string"},
+          "role": {"type": "string", "enum": ["owner", "developer", "main_contractor", "subcontractor", "consultant", "designer", "supervisor", "partner", "other"]},
+          "identity": {"type": "object", "nullable": true},
+          "status": {"type": "string", "enum": ["confirmed", "possible", "conflicting", "historical"]},
+          "lastVerifiedOn": {"type": "string", "nullable": true},
+          "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
+        },
+        "additionalProperties": false
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "projectName": {"type": "string"},
+          "participants": {"type": "array", "items": {"$ref": "#/components/schemas/ProjectParticipant"}},
+          "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
+        },
+        "additionalProperties": true
+      },
+      "Exclusivity": {
+        "type": "object",
+        "required": ["status", "scope", "description", "lastVerifiedOn", "evidence"],
+        "properties": {
+          "status": {"type": "string", "enum": ["exclusive", "non_exclusive", "unknown", "conflicting"]},
+          "scope": {"type": "string", "nullable": true}, "description": {"type": "string", "nullable": true},
+          "lastVerifiedOn": {"type": "string", "nullable": true},
+          "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
+        },
+        "additionalProperties": false
+      },
+      "Relationship": {
+        "type": "object",
+        "properties": {
+          "counterpartyName": {"type": "string"}, "relationshipType": {"type": "string"},
+          "limitations": {"type": "array", "items": {"type": "string"}},
+          "exclusivity": {"$ref": "#/components/schemas/Exclusivity"},
+          "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
+        },
+        "additionalProperties": true
+      },
+      "Assessment": {
+        "type": "object",
+        "properties": {"status": {"type": "string"}, "capabilityContext": {"type": "object"}, "dimensions": {"type": "array", "items": {"type": "object"}}},
+        "additionalProperties": true
+      },
+      "CompanyContent": {
+        "type": "object",
+        "required": ["company", "assessment", "competitorCustomerPortfolio", "researchStatus", "lastResearchedOn"],
         "properties": {
           "company": {"type": "object"},
+          "aliases": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "registrations": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "capitalRecords": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "websites": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "addresses": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "marketPresence": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "socialChannels": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "researchClassifications": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "companyRoles": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "productsAndServices": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "projects": {"type": "array", "items": {"$ref": "#/components/schemas/Project"}},
+          "relationships": {"type": "array", "items": {"$ref": "#/components/schemas/Relationship"}},
+          "contacts": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "licensesAndCertifications": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "financialRecords": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "newsAndSocialMedia": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "customsTransactions": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "lawsuitsAndCompliance": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "inquiries": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "risks": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "assessment": {"$ref": "#/components/schemas/Assessment"},
+          "competitorCustomerPortfolio": {"type": "object"},
+          "missingInformation": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "recommendedActions": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "additionalInformation": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "researchStatus": {"type": "string"}, "lastResearchedOn": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "CompanyRequest": {
+        "type": "object",
+        "required": ["identity", "visibility", "marketCode", "scopeCode", "asOf", "content"],
+        "properties": {
+          "identity": {"$ref": "#/components/schemas/Identity"},
           "visibility": {"type": "string", "enum": ["private", "public"]},
-          "researchClassifications": {"type": "array", "items": {"type": "object"}},
-          "productsAndServices": {"type": "array", "items": {"type": "object"}}
+          "marketCode": {"type": "string"}, "scopeCode": {"type": "string", "enum": ["construction_formwork"]},
+          "asOf": {"type": "string"}, "lastVerifiedOn": {"type": "string", "nullable": true},
+          "scoringCriteriaHash": {"type": "string"}, "content": {"$ref": "#/components/schemas/CompanyContent"}
         },
         "additionalProperties": false
       },
       "CompanyResponse": {
         "type": "object",
         "required": ["companyKey", "visibility", "detailRoute"],
-        "properties": {
-          "companyKey": {"type": "string"},
-          "visibility": {"type": "string", "enum": ["private", "public"]},
-          "detailRoute": {"type": "string"}
-        },
+        "properties": {"companyKey": {"type": "string"}, "visibility": {"type": "string", "enum": ["private", "public"]}, "detailRoute": {"type": "string"}},
+        "additionalProperties": true
+      },
+      "ScoringCriteriaResponse": {
+        "type": "object",
+        "required": ["hash", "criteria"],
+        "properties": {"hash": {"type": "string"}, "criteria": {"type": "object"}},
         "additionalProperties": true
       }
     }
