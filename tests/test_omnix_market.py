@@ -67,6 +67,28 @@ def args(method: str, path: str, body: str | None = None, **overrides):
 
 
 def aggregate_body(visibility: str = "private", classifications=None) -> dict:
+    selected = classifications or []
+    lead = any(item.get("classification") == "lead" and item.get("status") != "rejected" for item in selected)
+    assessment = {
+        "grade": None, "overallScore": None, "overallConclusion": None, "assessedOn": None,
+        "informationConfirmationRate": None, "dimensions": [], "evidence": [],
+    }
+    if lead:
+        dimensions = [
+            ("项目与城市价值", 9, 15), ("客户规模与行业地位", 12, 20),
+            ("未来项目与采购需求", 12, 20), ("决策链与触达可行性", 6, 10),
+            ("合作与支付能力", 9, 15), ("多产品匹配与复制价值", 12, 20),
+        ]
+        assessment = {
+            "grade": "routine_follow_up", "overallScore": 60,
+            "overallConclusion": "Completed cohort assessment.", "assessedOn": "2026-08-20",
+            "informationConfirmationRate": 75,
+            "dimensions": [
+                {"name": name, "score": score, "maxScore": maximum, "level": "medium", "rationale": "Fixture", "evidence": []}
+                for name, score, maximum in dimensions
+            ],
+            "evidence": [],
+        }
     return {
         "identity": {
             "entityKind": "operating_company", "jurisdiction": "AU",
@@ -78,10 +100,12 @@ def aggregate_body(visibility: str = "private", classifications=None) -> dict:
         "asOf": "2026-08-20",
         "lastVerifiedOn": "2026-08-20",
         "content": {
-            "company": {"companyName": "Example", "entityType": "operating_company"},
-            "researchClassifications": classifications or [],
-            "assessment": {"status": "not_requested"},
-            "competitorCustomerPortfolio": {"status": "not_requested"},
+            "company": {
+                "companyName": "Example", "entityType": "operating_company", "country": "Australia",
+                "status": "active", "listingStatus": "unknown", "evidence": [],
+            },
+            "researchClassifications": selected,
+            "assessment": assessment,
             "researchStatus": "completed_with_gaps",
             "lastResearchedOn": "2026-08-20",
         },
@@ -128,6 +152,10 @@ class OpenApiContractTests(unittest.TestCase):
     def test_openapi_fixture_matches_the_company_surface(self) -> None:
         self.assertEqual(set(SPEC["paths"]), {path for _, path in CLIENT.ALLOWED_OPERATIONS})
         self.assertEqual(CLIENT.aggregate_contract_gaps(SPEC), [])
+        self.assertEqual(
+            SPEC["x-contract-source"]["apiCommit"],
+            "b74b42209318ca2cc2802cac56388855f4ef3884",
+        )
 
     def test_contract_gaps_detect_silent_projection_loss(self) -> None:
         narrowed = json.loads(json.dumps(SPEC))
@@ -227,9 +255,15 @@ class ProjectionTests(unittest.TestCase):
             "company": {
                 "companyName": "Example", "entityType": "operating_company", "country": "Australia",
                 "countryCode": "AU", "status": "active", "summary": "", "researchConclusion": "",
+                "listingStatus": "not_listed",
                 "evidence": [evidence],
             },
-            "registrations": [],
+            "aliases": [{"name": "Example Build", "aliasType": "trading_name", "status": "active", "evidence": [evidence]}],
+            "registrations": [{
+                "registrationType": "company_number", "registrationNumber": "123456789",
+                "legalName": "Example Legal Pty Ltd.", "jurisdiction": "AU", "status": "active",
+                "verificationStatus": "verified", "evidence": [evidence],
+            }],
             "websites": [{
                 "url": "https://example.com", "websiteType": "official", "status": "active",
                 "verificationStatus": "verified", "evidence": [evidence],
@@ -242,14 +276,26 @@ class ProjectionTests(unittest.TestCase):
             }],
             "relationships": [{
                 "counterpartyName": "Example Customer", "relationshipType": "customer",
+                "reviewDecision": "pending",
                 "limitations": [], "exclusivity": {
                     "status": "unknown", "scope": None, "description": None,
                     "lastVerifiedOn": None, "evidence": [],
                 }, "evidence": [evidence],
             }],
             "researchClassifications": [{"classification": "competitor", "status": "confirmed", "evidence": [evidence]}],
-            "assessment": {"status": "not_requested", "capabilityContext": {}},
-            "competitorCustomerPortfolio": {"status": "no_verified_customers"},
+            "assessment": {"status": "not_requested", "capabilityContext": {
+                "foundationKey": "geto:capability-foundation", "foundationVersion": "2026-08-19",
+                "asOf": "2026-08-20", "status": "available", "contentHash": "sha256:" + "a" * 64,
+                "productCodes": ["aluminum_formwork"], "scenarioCodes": [], "roleCodes": [],
+                "caseKeys": [], "gapCodes": [],
+            }},
+            "competitorCustomerPortfolio": {
+                "assessmentType": "competitor_customer_portfolio", "status": "no_verified_customers",
+                "modelCode": "GETO_COMPETITOR_CUSTOMER_PORTFOLIO", "modelVersion": "2026-08-19",
+                "customerValueModelCode": "GETO_LEAD_VALUE", "asOf": "2026-08-20",
+                "verifiedCustomerCount": 0, "scoredCustomerCount": 0, "customerScoreCoverage": 0,
+                "averageCustomerValueScore": None, "customers": [],
+            },
             "inquiryAssessment": {"status": "completed", "overallScore": 80},
             "researchQueries": [],
             "reportFiles": [],
@@ -267,6 +313,12 @@ class ProjectionTests(unittest.TestCase):
         self.assertIn("capabilityContext", projected["content"]["assessment"])
         self.assertIn("participants", projected["content"]["projects"][0])
         self.assertIn("exclusivity", projected["content"]["relationships"][0])
+        self.assertEqual(projected["content"]["aliases"][0]["type"], "trading_name")
+        self.assertNotIn("aliasType", projected["content"]["aliases"][0])
+        self.assertEqual(projected["content"]["registrations"][0]["registeredName"], "Example Legal Pty Ltd.")
+        self.assertNotIn("legalName", projected["content"]["registrations"][0])
+        self.assertEqual(projected["content"]["relationships"][0]["relatedPartyName"], "Example Customer")
+        self.assertEqual(projected["content"]["relationships"][0]["customerQualificationStatus"], "pending")
         self.assertNotIn("inquiryAssessment", projected["content"])
         self.assertNotIn("researchQueries", projected["content"])
         self.assertNotIn("reportFiles", projected["content"])
@@ -274,8 +326,28 @@ class ProjectionTests(unittest.TestCase):
     def test_projection_blocks_unverified_identity(self) -> None:
         value = self.local_company()
         value["websites"][0]["verificationStatus"] = "unverified"
+        value["registrations"][0]["verificationStatus"] = "unverified"
+        value["registrations"][0]["status"] = "unknown"
         with self.assertRaisesRegex(ValueError, "required for upload"):
             CLIENT.project_company(value, "private", None, None, "construction_formwork")
+
+    def test_confirmed_competitor_requires_portfolio(self) -> None:
+        value = self.local_company()
+        value["competitorCustomerPortfolio"] = {"status": "not_requested"}
+        with self.assertRaisesRegex(ValueError, "competitorCustomerPortfolio"):
+            CLIENT.project_company(value, "private", None, None, "construction_formwork")
+
+    def test_lead_waits_for_completed_cohort_assessment(self) -> None:
+        value = self.local_company()
+        value["researchClassifications"] = [{"classification": "lead", "status": "confirmed", "evidence": value["company"]["evidence"]}]
+        with self.assertRaisesRegex(ValueError, "completed six-dimension cohort"):
+            CLIENT.project_company(value, "private", None, None, "construction_formwork")
+
+    def test_global_market_code_is_allowed_when_explicit(self) -> None:
+        projected = CLIENT.project_company(
+            self.local_company(), "private", None, "GLOBAL", "construction_formwork"
+        )
+        self.assertEqual(projected["marketCode"], "GLOBAL")
 
     def test_projection_matches_reference_openapi(self) -> None:
         projected = CLIENT.project_company(

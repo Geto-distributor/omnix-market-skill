@@ -1,5 +1,9 @@
 {
   "openapi": "3.0.1",
+  "x-contract-source": {
+    "apiCommit": "b74b42209318ca2cc2802cac56388855f4ef3884",
+    "uiCommit": "76254f5170c6e9a04f562e356ee11b507b09fe3b"
+  },
   "paths": {
     "/api/market-intelligence/companies": {
       "get": {"operationId": "ListCompanies", "responses": {"200": {"content": {"application/json": {"schema": {"type": "object"}}}}}},
@@ -52,8 +56,7 @@
           "publisher": {"type": "string", "nullable": true}, "sourceType": {"type": "string"},
           "publishedOn": {"type": "string", "nullable": true}, "retrievedOn": {"type": "string"},
           "locator": {"type": "string", "nullable": true}, "excerpt": {"type": "string", "nullable": true},
-          "note": {"type": "string", "nullable": true},
-          "verificationScope": {"type": "array", "items": {"type": "string"}}
+          "note": {"type": "string", "nullable": true}
         },
         "additionalProperties": false
       },
@@ -61,6 +64,20 @@
         "type": "object",
         "properties": {"evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}},
         "additionalProperties": true
+      },
+      "CompanyCore": {
+        "type": "object",
+        "properties": {
+          "companyName": {"type": "string"}, "entityType": {"type": "string"}, "country": {"type": "string"},
+          "status": {"type": "string"}, "summary": {"type": "string", "nullable": true},
+          "researchConclusion": {"type": "string", "nullable": true}, "foundedOn": {"type": "string", "nullable": true},
+          "companyScale": {"type": "string", "nullable": true}, "headcount": {"type": "integer", "nullable": true},
+          "listingStatus": {"type": "string", "enum": ["self_listed", "parent_listed", "not_listed", "unknown"]},
+          "listingDetails": {"type": "string", "nullable": true}, "marketPosition": {"type": "string", "nullable": true},
+          "priority": {"type": "string", "nullable": true}, "procurementBoundary": {"type": "string", "nullable": true},
+          "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
+        },
+        "additionalProperties": false
       },
       "ProjectParticipant": {
         "type": "object",
@@ -78,11 +95,24 @@
       "Project": {
         "type": "object",
         "properties": {
-          "projectName": {"type": "string"},
+          "projectName": {"type": "string"}, "country": {"type": "string", "nullable": true},
+          "region": {"type": "string", "nullable": true}, "city": {"type": "string", "nullable": true},
+          "address": {"type": "string", "nullable": true}, "projectType": {"type": "string", "nullable": true},
+          "projectKind": {"type": "string"}, "stage": {"type": "string", "nullable": true}, "status": {"type": "string"},
+          "startOn": {"type": "string", "nullable": true}, "expectedCompletionOn": {"type": "string", "nullable": true},
+          "completedOn": {"type": "string", "nullable": true}, "scale": {"type": "object", "nullable": true},
+          "companyRole": {"type": "string", "nullable": true},
           "participants": {"type": "array", "items": {"$ref": "#/components/schemas/ProjectParticipant"}},
+          "productsOrTechnologies": {"type": "array", "items": {"type": "string"}},
+          "potentialProducts": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "demandJudgement": {"type": "string", "nullable": true}, "entryWindow": {"type": "string", "nullable": true},
+          "opportunity": {"type": "string", "nullable": true}, "procurementBoundary": {"type": "string", "nullable": true},
+          "knownRelationship": {"type": "string", "nullable": true}, "getoRelevance": {"type": "string", "nullable": true},
+          "verificationStatus": {"type": "string"}, "lastVerifiedOn": {"type": "string", "nullable": true},
+          "importantNotes": {"type": "string", "nullable": true},
           "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
         },
-        "additionalProperties": true
+        "additionalProperties": false
       },
       "Exclusivity": {
         "type": "object",
@@ -98,23 +128,66 @@
       "Relationship": {
         "type": "object",
         "properties": {
-          "counterpartyName": {"type": "string"}, "relationshipType": {"type": "string"},
+          "relatedPartyName": {"type": "string"}, "relatedPartyIdentity": {"type": "object", "nullable": true},
+          "relatedPartyType": {"type": "string"}, "relationshipType": {"type": "string"}, "direction": {"type": "string"},
+          "projectName": {"type": "string", "nullable": true}, "productName": {"type": "string", "nullable": true},
+          "country": {"type": "string", "nullable": true}, "description": {"type": "string", "nullable": true},
+          "cooperationMode": {"type": "string", "nullable": true}, "cooperationDepth": {"type": "string", "nullable": true},
+          "customerQualificationStatus": {"type": "string", "enum": ["verified_customer", "verified_non_customer", "pending", "conflicting", "invalid"]},
+          "buyer": {"type": "string", "nullable": true}, "actualUser": {"type": "string", "nullable": true},
+          "customerValueAssessment": {"type": "object", "nullable": true}, "entryAssessment": {"type": "object", "nullable": true},
+          "entryPoint": {"type": "string", "nullable": true},
           "limitations": {"type": "array", "items": {"type": "string"}},
           "exclusivity": {"$ref": "#/components/schemas/Exclusivity"},
+          "status": {"type": "string"}, "startedOn": {"type": "string", "nullable": true},
+          "endedOn": {"type": "string", "nullable": true}, "lastVerifiedOn": {"type": "string", "nullable": true},
           "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
         },
-        "additionalProperties": true
+        "additionalProperties": false
+      },
+      "CapabilityContext": {
+        "type": "object",
+        "properties": {
+          "foundationKey": {"type": "string"}, "foundationVersion": {"type": "string"},
+          "asOf": {"type": "string", "nullable": true}, "status": {"type": "string", "enum": ["available", "partial", "unavailable"]},
+          "contentHash": {"type": "string"}, "productCodes": {"type": "array", "items": {"type": "string"}},
+          "scenarioCodes": {"type": "array", "items": {"type": "string"}}, "roleCodes": {"type": "array", "items": {"type": "string"}},
+          "caseKeys": {"type": "array", "items": {"type": "string"}}, "gapCodes": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
       },
       "Assessment": {
         "type": "object",
-        "properties": {"status": {"type": "string"}, "capabilityContext": {"type": "object"}, "dimensions": {"type": "array", "items": {"type": "object"}}},
-        "additionalProperties": true
+        "properties": {
+          "grade": {"type": "string", "nullable": true}, "overallScore": {"type": "number", "nullable": true},
+          "overallConclusion": {"type": "string", "nullable": true}, "assessedOn": {"type": "string", "nullable": true},
+          "informationConfirmationRate": {"type": "number", "nullable": true},
+          "dimensions": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
+          "capabilityContext": {"$ref": "#/components/schemas/CapabilityContext"},
+          "evidence": {"type": "array", "items": {"$ref": "#/components/schemas/Evidence"}}
+        },
+        "additionalProperties": false
+      },
+      "CompetitorCustomerPortfolio": {
+        "type": "object",
+        "properties": {
+          "assessmentType": {"type": "string", "enum": ["competitor_customer_portfolio"]},
+          "status": {"type": "string", "enum": ["no_verified_customers", "pending_customer_scores", "partial_coverage", "completed"]},
+          "modelCode": {"type": "string", "enum": ["GETO_COMPETITOR_CUSTOMER_PORTFOLIO"]},
+          "modelVersion": {"type": "string", "enum": ["2026-08-19"]},
+          "customerValueModelCode": {"type": "string", "enum": ["GETO_LEAD_VALUE"]},
+          "asOf": {"type": "string"}, "verifiedCustomerCount": {"type": "integer"},
+          "scoredCustomerCount": {"type": "integer"}, "customerScoreCoverage": {"type": "number"},
+          "averageCustomerValueScore": {"type": "number", "nullable": true},
+          "customers": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}}
+        },
+        "additionalProperties": false
       },
       "CompanyContent": {
         "type": "object",
-        "required": ["company", "assessment", "competitorCustomerPortfolio", "researchStatus", "lastResearchedOn"],
+        "required": ["company", "assessment", "researchStatus", "lastResearchedOn"],
         "properties": {
-          "company": {"type": "object"},
+          "company": {"$ref": "#/components/schemas/CompanyCore"},
           "aliases": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
           "registrations": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
           "capitalRecords": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
@@ -136,7 +209,7 @@
           "inquiries": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
           "risks": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
           "assessment": {"$ref": "#/components/schemas/Assessment"},
-          "competitorCustomerPortfolio": {"type": "object"},
+          "competitorCustomerPortfolio": {"$ref": "#/components/schemas/CompetitorCustomerPortfolio"},
           "missingInformation": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
           "recommendedActions": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},
           "additionalInformation": {"type": "array", "items": {"$ref": "#/components/schemas/EvidenceBackedObject"}},

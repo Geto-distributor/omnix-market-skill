@@ -202,6 +202,9 @@ def aggregate_contract_gaps(spec: dict[str, Any]) -> list[str]:
             "content.assessment.capabilityContext": schema_property(spec, assessment, "capabilityContext"),
             "content.projects[].participants": schema_property(spec, projects, "participants"),
             "content.relationships[].exclusivity": schema_property(spec, relationships, "exclusivity"),
+            "content.relationships[].customerQualificationStatus": schema_property(
+                spec, relationships, "customerQualificationStatus"
+            ),
         }
     except ValueError:
         return ["Company Aggregate request schema"]
@@ -305,6 +308,15 @@ def is_lead(content: dict[str, Any]) -> bool:
     )
 
 
+def is_confirmed_competitor(content: dict[str, Any]) -> bool:
+    return any(
+        isinstance(item, dict)
+        and str(item.get("classification") or "").casefold() == "competitor"
+        and str(item.get("status") or "").casefold() == "confirmed"
+        for item in content.get("researchClassifications", [])
+    )
+
+
 def strong_identity(identity: Any) -> bool:
     if not isinstance(identity, dict) or identity.get("entityKind") not in ENTITY_KINDS:
         return False
@@ -324,9 +336,9 @@ def identity_from_company(value: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("identity_conflict Company is not uploadable")
     identity: dict[str, Any] = {"entityKind": company.get("entityType")}
     registrations = [item for item in value.get("registrations", []) if isinstance(item, dict)]
-    verified = [item for item in registrations if item.get("verificationStatus") in {"verified", "confirmed"}]
-    candidates = verified or [item for item in registrations if item.get("status") == "active"]
-    for item in candidates:
+    for item in registrations:
+        if item.get("verificationStatus") not in {"verified", "confirmed"}:
+            continue
         number = str(item.get("registrationNumber") or "").strip()
         jurisdiction = str(item.get("jurisdiction") or company.get("countryCode") or "").strip()
         if number and jurisdiction:
@@ -369,6 +381,297 @@ def latest_verified_on(value: Any) -> str | None:
     return max(dates) if dates else None
 
 
+def first(item: dict[str, Any], *names: str, default: Any = None) -> Any:
+    for name in names:
+        if name in item:
+            return item[name]
+    return default
+
+
+def evidence_of(item: dict[str, Any]) -> list[dict[str, Any]]:
+    fields = (
+        "sourceTitle", "sourceUrl", "publisher", "sourceType", "publishedOn",
+        "retrievedOn", "locator", "excerpt", "note",
+    )
+    return [
+        {field: source.get(field) for field in fields if field in source}
+        for source in item.get("evidence", []) if isinstance(source, dict)
+    ]
+
+
+def backed(item: dict[str, Any], **fields: Any) -> dict[str, Any]:
+    return {**fields, "evidence": evidence_of(item)}
+
+
+def current_flag(item: dict[str, Any]) -> bool | None:
+    if isinstance(item.get("current"), bool):
+        return item["current"]
+    status = str(item.get("status") or "").casefold()
+    if status in {"active", "current", "confirmed", "verified"}:
+        return True
+    if status in {"inactive", "historical", "ended"}:
+        return False
+    return None
+
+
+def map_company_core(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item,
+        companyName=item.get("companyName", ""), entityType=item.get("entityType", "operating_company"),
+        country=item.get("country", ""), status=item.get("status", "unknown"), summary=item.get("summary"),
+        researchConclusion=item.get("researchConclusion"), foundedOn=item.get("foundedOn"),
+        companyScale=item.get("companyScale"), headcount=item.get("headcount"), listingStatus=item.get("listingStatus", "unknown"),
+        listingDetails=item.get("listingDetails"), marketPosition=item.get("marketPosition"),
+        priority=item.get("priority"), procurementBoundary=item.get("procurementBoundary"),
+    )
+
+
+def map_alias(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, name=item.get("name", ""), type=first(item, "type", "aliasType", default="trading_name"),
+                  language=item.get("language"), current=current_flag(item))
+
+
+def map_registration(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, registrationType=item.get("registrationType"), registrationNumber=item.get("registrationNumber"),
+                  registeredName=first(item, "registeredName", "legalName"),
+                  registeredBusinessScope=first(item, "registeredBusinessScope", "businessScope", default=[]),
+                  jurisdiction=item.get("jurisdiction"), status=item.get("status", "unknown"),
+                  registeredOn=item.get("registeredOn"), expiresOn=item.get("expiresOn"))
+
+
+def map_capital(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, capitalType=item.get("capitalType", "registered_capital"), amount=item.get("amount"),
+                  currency=item.get("currency"), asOf=item.get("asOf"), status=item.get("status", "reported"),
+                  note=first(item, "note", "description"))
+
+
+def map_website(item: dict[str, Any]) -> dict[str, Any]:
+    url = str(item.get("url") or "")
+    parsed = urllib.parse.urlparse(url if "://" in url else f"https://{url}")
+    return backed(item, url=url, domain=item.get("domain") or parsed.hostname,
+                  type=first(item, "type", "websiteType", default="official"), status=item.get("status", "active"))
+
+
+def map_address(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, fullAddress=first(item, "fullAddress", "addressLine", default=""),
+                  type=first(item, "type", "addressType", default="other"), country=item.get("country"),
+                  region=first(item, "region", "state", "province"), city=item.get("city"),
+                  postalCode=item.get("postalCode"), current=current_flag(item))
+
+
+def map_media(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, url=item.get("url", ""), mediaType=item.get("mediaType", "image"),
+                  caption=item.get("caption"), lastVerifiedOn=item.get("lastVerifiedOn"))
+
+
+def map_product(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, name=item.get("name", ""), systemName=item.get("systemName"), type=item.get("type", "product"),
+                  category=item.get("category"), description=item.get("description"),
+                  technologyTerms=item.get("technologyTerms", []), applications=item.get("applications", []),
+                  targetCustomers=item.get("targetCustomers", []), markets=item.get("markets", []),
+                  commercialRoles=item.get("commercialRoles", []), manufacturingStatus=item.get("manufacturingStatus", "unknown"),
+                  manufacturingDescription=item.get("manufacturingDescription"), factoryLocations=item.get("factoryLocations", []),
+                  media=[map_media(child) for child in item.get("media", []) if isinstance(child, dict)],
+                  representativeProject=item.get("representativeProject"), status=item.get("status", "claimed"),
+                  getoRelevance=item.get("getoRelevance", "unknown"))
+
+
+def map_identity(item: Any) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    return {name: item.get(name) for name in ("jurisdiction", "registrationNumber", "primaryDomain", "otherLegalId")}
+
+
+def map_participant(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, name=item.get("name", ""), role=item.get("role", ""), identity=map_identity(item.get("identity")),
+                  status=item.get("status", "possible"), lastVerifiedOn=item.get("lastVerifiedOn"))
+
+
+def map_potential_product(item: dict[str, Any]) -> dict[str, Any]:
+    return backed(item, productName=item.get("productName", ""), usageSummary=item.get("usageSummary"))
+
+
+def map_project(item: dict[str, Any]) -> dict[str, Any]:
+    history = item.get("currentOrHistorical")
+    kind = item.get("projectKind") or ("historical_case" if history == "historical" else "opportunity" if history in {"current", "future"} else "unknown")
+    scale = item.get("scale") if isinstance(item.get("scale"), dict) else {
+        "floors": item.get("storeys"), "units": item.get("units"), "area": item.get("buildingArea"),
+        "areaUnit": item.get("areaUnit"), "value": item.get("contractValue"), "currency": item.get("currency"),
+        "description": item.get("scale"),
+    }
+    return backed(item, projectName=item.get("projectName", ""), country=item.get("country"), region=item.get("region"),
+                  city=first(item, "city", "location"), address=item.get("address"), projectType=item.get("projectType"),
+                  projectKind=kind, stage=first(item, "stage", "procurementStage"), status=item.get("status", "unknown"),
+                  startOn=first(item, "startOn", "startedOn"), expectedCompletionOn=item.get("expectedCompletionOn"),
+                  completedOn=first(item, "completedOn", "endedOn"), scale=scale,
+                  companyRole=first(item, "companyRole", "targetCompanyRole"),
+                  participants=[map_participant(child) for child in item.get("participants", []) if isinstance(child, dict)],
+                  productsOrTechnologies=item.get("productsOrTechnologies", []),
+                  potentialProducts=[map_potential_product(child) for child in item.get("potentialProducts", []) if isinstance(child, dict)],
+                  demandJudgement=item.get("demandJudgement"), entryWindow=item.get("entryWindow"),
+                  opportunity=first(item, "opportunity", "getoOpportunity"), procurementBoundary=item.get("procurementBoundary"),
+                  knownRelationship=item.get("knownRelationship"), getoRelevance=item.get("getoRelevance"),
+                  verificationStatus=first(item, "verificationStatus", "roleVerificationStatus", default="claimed"),
+                  lastVerifiedOn=item.get("lastVerifiedOn"), importantNotes=first(item, "importantNotes", "description"))
+
+
+def map_exclusivity(item: Any) -> dict[str, Any]:
+    value = item if isinstance(item, dict) else {"status": "unknown", "evidence": []}
+    return backed(value, status=value.get("status", "unknown"), scope=value.get("scope"),
+                  description=value.get("description"), lastVerifiedOn=value.get("lastVerifiedOn"))
+
+
+def map_compact_assessment(item: Any, entry: bool = False) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    fields = {"score": item.get("score"), "maxScore": item.get("maxScore", 5),
+              "rationale": item.get("rationale"), "assessedOn": item.get("assessedOn")} if entry else {
+        "overallScore": item.get("overallScore"), "grade": item.get("grade"), "assessedOn": item.get("assessedOn")
+    }
+    return backed(item, **fields)
+
+
+def map_relationship(item: dict[str, Any]) -> dict[str, Any]:
+    qualification = first(item, "customerQualificationStatus", "reviewDecision", default="pending")
+    return backed(item, relatedPartyName=first(item, "relatedPartyName", "counterpartyName", default=""),
+                  relatedPartyIdentity=map_identity(item.get("relatedPartyIdentity")),
+                  relatedPartyType=first(item, "relatedPartyType", default="company"),
+                  relationshipType=item.get("relationshipType", "other"), direction=item.get("direction", "mutual"),
+                  projectName=item.get("projectName"), productName=first(item, "productName", "productOrService"),
+                  country=item.get("country"), description=item.get("description"),
+                  cooperationMode=first(item, "cooperationMode", "cooperationModeCode"),
+                  cooperationDepth=first(item, "cooperationDepth", "cooperationDepthCode"),
+                  customerQualificationStatus=qualification, buyer=item.get("buyer"), actualUser=item.get("actualUser"),
+                  customerValueAssessment=map_compact_assessment(item.get("customerValueAssessment")),
+                  entryAssessment=map_compact_assessment(item.get("entryAssessment"), entry=True),
+                  entryPoint=item.get("entryPoint"), limitations=item.get("limitations", []),
+                  exclusivity=map_exclusivity(item.get("exclusivity")), status=item.get("status", "possible"),
+                  startedOn=item.get("startedOn"), endedOn=item.get("endedOn"), lastVerifiedOn=item.get("lastVerifiedOn"))
+
+
+def map_capability_context(item: Any) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    return {name: item.get(name) for name in (
+        "foundationKey", "foundationVersion", "asOf", "status", "contentHash", "productCodes",
+        "scenarioCodes", "roleCodes", "caseKeys", "gapCodes",
+    )}
+
+
+def map_assessment(item: Any) -> dict[str, Any]:
+    value = item if isinstance(item, dict) else {}
+    completed = value.get("status") == "completed"
+    dimensions = [] if not completed else [
+        backed(child, name=child.get("name", ""), score=first(child, "score", "finalDimensionScore"),
+               maxScore=child.get("maxScore"), level=child.get("level"), rationale=child.get("rationale"))
+        for child in value.get("dimensions", []) if isinstance(child, dict)
+    ]
+    result = backed(value, grade=value.get("grade") if completed else None,
+                    overallScore=value.get("overallScore") if completed else None,
+                    overallConclusion=value.get("overallConclusion"), assessedOn=value.get("assessedOn"),
+                    informationConfirmationRate=first(value, "informationConfirmationRate", "informationCompleteness"),
+                    dimensions=dimensions, capabilityContext=map_capability_context(value.get("capabilityContext")))
+    if result["capabilityContext"] is None:
+        result.pop("capabilityContext")
+    return result
+
+
+def map_portfolio(item: Any) -> dict[str, Any] | None:
+    if not isinstance(item, dict) or item.get("status") == "not_requested":
+        return None
+    customers = [backed(child, companyName=child.get("companyName", ""), country=child.get("country"),
+                        relationshipCount=child.get("relationshipCount", 0),
+                        customerAssessmentStatus=child.get("customerAssessmentStatus", "not_scored"),
+                        customerValueScore=child.get("customerValueScore"),
+                        customerValueModelVersion=child.get("customerValueModelVersion"),
+                        cohortBaselineVersion=child.get("cohortBaselineVersion"), assessedOn=child.get("assessedOn"))
+                 for child in item.get("customers", []) if isinstance(child, dict)]
+    return {
+        "assessmentType": item.get("assessmentType"), "status": item.get("status"), "modelCode": item.get("modelCode"),
+        "modelVersion": item.get("modelVersion"), "customerValueModelCode": item.get("customerValueModelCode"),
+        "asOf": item.get("asOf"), "verifiedCustomerCount": item.get("verifiedCustomerCount", 0),
+        "scoredCustomerCount": item.get("scoredCustomerCount", 0), "customerScoreCoverage": item.get("customerScoreCoverage", 0),
+        "averageCustomerValueScore": item.get("averageCustomerValueScore"), "customers": customers,
+    }
+
+
+def map_content(value: dict[str, Any]) -> dict[str, Any]:
+    company = value.get("company") if isinstance(value.get("company"), dict) else {}
+    content = {
+        "company": map_company_core(company),
+        "aliases": [map_alias(item) for item in value.get("aliases", []) if isinstance(item, dict)],
+        "registrations": [map_registration(item) for item in value.get("registrations", []) if isinstance(item, dict)],
+        "capitalRecords": [map_capital(item) for item in value.get("capitalRecords", []) if isinstance(item, dict)],
+        "websites": [map_website(item) for item in value.get("websites", []) if isinstance(item, dict)],
+        "addresses": [map_address(item) for item in value.get("addresses", []) if isinstance(item, dict)],
+        "marketPresence": [backed(item, country=item.get("country"), region=item.get("region"),
+            presenceType=item.get("presenceType", "claimed_only"), status=item.get("status", "possible"),
+            description=item.get("description")) for item in value.get("marketPresence", []) if isinstance(item, dict)],
+        "socialChannels": [backed(item, platform=item.get("platform", ""), url=item.get("url", ""),
+            handle=item.get("handle"), officialStatus=first(item, "officialStatus", "status", default="unconfirmed"),
+            lastActivityOn=item.get("lastActivityOn")) for item in value.get("socialChannels", []) if isinstance(item, dict)],
+        "researchClassifications": [backed(item, classification=item.get("classification", ""),
+            status=item.get("status", "possible"), country=item.get("country"), productScope=item.get("productScope", []),
+            reason=item.get("reason", "")) for item in value.get("researchClassifications", []) if isinstance(item, dict)],
+        "companyRoles": [backed(item, role=item.get("role", ""), scope=item.get("scope"), country=item.get("country"),
+            projectName=item.get("projectName"), status=item.get("status", "possible"), rationale=item.get("rationale"))
+            for item in value.get("companyRoles", []) if isinstance(item, dict)],
+        "productsAndServices": [map_product(item) for item in value.get("productsAndServices", []) if isinstance(item, dict)],
+        "projects": [map_project(item) for item in value.get("projects", []) if isinstance(item, dict)],
+        "relationships": [map_relationship(item) for item in value.get("relationships", []) if isinstance(item, dict)],
+        "contacts": [backed(item, **{key: item.get(key) for key in (
+            "contactType", "name", "jobTitle", "department", "seniority", "responsibilities", "buyingRole", "location",
+            "workEmail", "workPhone", "linkedinUrl", "otherProfileUrl", "verificationStatus", "lastVerifiedOn")})
+            for item in value.get("contacts", []) if isinstance(item, dict)],
+        "financialRecords": [backed(item, **{key: item.get(key) for key in (
+            "recordType", "period", "value", "currency", "unit", "valueStatus", "description")})
+            for item in value.get("financialRecords", []) if isinstance(item, dict)],
+        "assessment": map_assessment(value.get("assessment")), "competitorCustomerPortfolio": map_portfolio(value.get("competitorCustomerPortfolio")),
+        "researchStatus": value.get("researchStatus"), "lastResearchedOn": value.get("lastResearchedOn"),
+    }
+    content["licensesAndCertifications"] = [backed(item, name=first(item, "name", "licenseName", default=""),
+        type=first(item, "type", "licenseType", default="other"), number=first(item, "number", "licenseNumber"),
+        holderName=item.get("holderName"), issuer=first(item, "issuer", "authority"), jurisdiction=item.get("jurisdiction"),
+        scope=item.get("scope"), status=item.get("status", "unknown"), validFrom=first(item, "validFrom", "issuedOn"),
+        validUntil=first(item, "validUntil", "expiresOn")) for item in value.get("licensesAndCertifications", []) if isinstance(item, dict)]
+    content["newsAndSocialMedia"] = [backed(item, title=item.get("title", ""), type=first(item, "type", "itemType", default="other"),
+        publisherOrPlatform=first(item, "publisherOrPlatform", "publisher", "platform"), publishedOn=item.get("publishedOn"),
+        url=item.get("url"), summary=item.get("summary"), sentiment=item.get("sentiment", "neutral"),
+        relatedProject=item.get("relatedProject"), businessMeaning=item.get("businessMeaning"))
+        for item in value.get("newsAndSocialMedia", []) if isinstance(item, dict)]
+    content["customsTransactions"] = [backed(item, **{key: item.get(key) for key in (
+        "resultType", "direction", "importer", "exporter", "partnerCountry", "transactionOn", "dateRange", "hsCode",
+        "productDescription", "quantity", "quantityUnit", "value", "currency", "recordCount", "provider", "queryScope",
+        "verificationStatus", "notes")}, originPort=first(item, "originPort", default=(item.get("ports") or [None])[0]),
+        destinationPort=first(item, "destinationPort", default=(item.get("ports") or [None, None])[-1]))
+        for item in value.get("customsTransactions", []) if isinstance(item, dict)]
+    content["lawsuitsAndCompliance"] = [backed(item, type=first(item, "type", "recordType", default="other"),
+        title=item.get("title") or item.get("description") or "Compliance record", caseNumber=item.get("caseNumber"),
+        authorityOrCourt=first(item, "authorityOrCourt", "authority"), jurisdiction=item.get("jurisdiction"),
+        parties=item.get("parties", []), filedOn=first(item, "filedOn", "recordOn"), status=item.get("status", "unknown"),
+        outcome=item.get("outcome"), amount=item.get("amount"), currency=item.get("currency"),
+        relatedProject=item.get("relatedProject"), riskImpact=first(item, "riskImpact", "description"))
+        for item in value.get("lawsuitsAndCompliance", []) if isinstance(item, dict)]
+    content["inquiries"] = [backed(item, **{key: item.get(key) for key in (
+        "receivedOn", "buyerName", "buyerContact", "buyerRole", "requestedProduct", "quantity", "quantityUnit",
+        "technicalRequirements", "projectName", "projectCountry", "deliveryDestination", "deliveryPort", "signingEntity",
+        "payer", "paymentTerms", "requestedDocuments", "attachments", "verificationStatus", "openQuestions")})
+        for item in value.get("inquiries", []) if isinstance(item, dict)]
+    content["risks"] = [backed(item, category=first(item, "category", "riskType", default="other"),
+        level=first(item, "level", "severity", default="unknown"), finding=first(item, "finding", "description", default=""),
+        impact=item.get("impact"), blocking=item.get("blocking"), mitigation=item.get("mitigation"))
+        for item in value.get("risks", []) if isinstance(item, dict)]
+    content["missingInformation"] = [backed(item, topic=item.get("topic", ""), status=item.get("status", "not_found"),
+        description=item.get("description"), whyItMatters=first(item, "whyItMatters", "impact"),
+        checkedScope=item.get("checkedScope"), recommendedAction=item.get("recommendedAction"))
+        for item in value.get("missingInformation", []) if isinstance(item, dict)]
+    content["recommendedActions"] = [backed(item, action=item.get("action", ""), priority=item.get("priority", "medium"),
+        owner=item.get("owner", "research"), timing=item.get("timing"), reason=first(item, "reason", "rationale"))
+        for item in value.get("recommendedActions", []) if isinstance(item, dict)]
+    content["additionalInformation"] = [backed(item, topic=item.get("topic", ""), title=item.get("title", ""),
+        details=item.get("details")) for item in value.get("additionalInformation", []) if isinstance(item, dict)]
+    return content
+
+
 def project_company(value: dict[str, Any], visibility: str, as_of: str | None,
                     market_code: str | None, scope_code: str) -> dict[str, Any]:
     if visibility not in {"private", "public"}:
@@ -377,8 +680,8 @@ def project_company(value: dict[str, Any], visibility: str, as_of: str | None,
     if not isinstance(company, dict):
         raise ValueError("company.json requires company")
     code = str(market_code or company.get("countryCode") or "").upper()
-    if not re.fullmatch(r"[A-Z]{2}", code):
-        raise ValueError("marketCode must be an ISO 3166-1 alpha-2 code")
+    if code != "GLOBAL" and not re.fullmatch(r"[A-Z]{2}", code):
+        raise ValueError("marketCode must be an uppercase ISO 3166-1 alpha-2 code or GLOBAL")
     if scope_code not in SCOPE_CODES:
         raise ValueError(f"scopeCode must be one of {sorted(SCOPE_CODES)}")
     snapshot = as_of or value.get("lastResearchedOn")
@@ -389,10 +692,15 @@ def project_company(value: dict[str, Any], visibility: str, as_of: str | None,
     unexpected = sorted(set(value) - CONTENT_FIELDS - LOCAL_ONLY_FIELDS)
     if unexpected:
         raise ValueError("company.json has unsupported top-level fields: " + ", ".join(unexpected))
-    content = {field: value[field] for field in CONTENT_FIELDS if field in value}
-    for field in ("company", "assessment", "competitorCustomerPortfolio", "researchStatus", "lastResearchedOn"):
-        if field not in content:
-            raise ValueError(f"company.json requires {field}")
+    content = map_content(value)
+    if content.get("competitorCustomerPortfolio") is None:
+        content.pop("competitorCustomerPortfolio", None)
+    if is_confirmed_competitor(content) and "competitorCustomerPortfolio" not in content:
+        raise ValueError("confirmed competitor upload requires a completed competitorCustomerPortfolio contract")
+    if is_lead(content):
+        assessment = content.get("assessment", {})
+        if assessment.get("overallScore") is None or not assessment.get("grade") or not assessment.get("dimensions"):
+            raise ValueError("lead upload requires a completed six-dimension cohort assessment")
     return {
         "identity": identity_from_company(value),
         "visibility": visibility,

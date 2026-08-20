@@ -95,3 +95,18 @@ python scripts/omnix_market.py prepare-upload \
 ```
 
 inquiryAssessment、researchQueries 和 reportFiles 留在本地。投影包含 lead 时，客户端从 scoring-criteria 读取并注入 scoringCriteriaHash。
+
+常见本地字段在生成结果中使用 API 名称：
+
+| 本地 company.json | Company Aggregate |
+| --- | --- |
+| aliases[].aliasType | aliases[].type |
+| registrations[].legalName | registrations[].registeredName |
+| websites[].websiteType | websites[].type |
+| projects[].startedOn | projects[].startOn |
+| projects[].targetCompanyRole | projects[].companyRole |
+| relationships[].counterpartyName | relationships[].relatedPartyName |
+| relationships[].reviewDecision | relationships[].customerQualificationStatus |
+| relationships[].cooperationModeCode | relationships[].cooperationMode |
+| relationships[].cooperationDepthCode | relationships[].cooperationDepth |
+| assessment.dimensions[].finalDimensionScore | assessment.dimensions[].score |

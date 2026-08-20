@@ -9,6 +9,8 @@
 | 409 other | 身份、状态或唯一性冲突 | 重新 resolve，人工仲裁 |
 | identity incomplete | 缺少已核实注册号或稳定官网域名 | private/public 均停止上传 |
 | scoring criteria mismatch | 本地 lead assessment 与平台评分口径不一致 | 保留本地结果，停止上传 |
+| lead assessment pending | 同类型 cohort 尚未形成最终六维分 | 主任务完成批量评分后再投影 |
+| competitor portfolio pending | confirmed competitor 尚无客户组合合同 | 完成竞对客户反查和组合聚合后再投影 |
 | 422 | OpenAPI/业务验证失败 | 修正本地映射后重试 |
 | 429 | 速率限制 | rate_limited，遵守 Retry-After |
 | 5xx | 服务暂不可用 | upstream_unavailable，本地研究仍完成 |

@@ -73,7 +73,9 @@ python scripts/omnix_market.py request POST '/api/market-intelligence/companies/
 
 ### 4. 创建或更新完整聚合
 
-先运行 `prepare-upload`。它把 company.json 投影为 OpenAPI 请求：marketCode 使用公司 ISO2 countryCode，scopeCode 使用 construction_formwork；保留同一 Company 的 lead 与 competitor 两条 researchClassifications、项目 participants、关系 exclusivity、competitorCustomerPortfolio、assessment.capabilityContext 和内嵌 Evidence。inquiryAssessment、researchQueries、reportFiles、报告与本地路径留在 ResearchBundle。
+先运行 `prepare-upload`。它按各资源 DTO 显式映射 company.json：marketCode 使用公司 ISO2 countryCode或用户明确给出的 GLOBAL，scopeCode 使用 construction_formwork；保留同一 Company 的 lead 与 competitor 两条 researchClassifications、项目 participants、关系 exclusivity、competitorCustomerPortfolio、assessment.capabilityContext 和内嵌 Evidence。inquiryAssessment、researchQueries、reportFiles、报告与本地路径留在 ResearchBundle。
+
+lead 在同类型 cohort 完成六维评分后进入投影。confirmed competitor 在竞对客户任务生成 competitorCustomerPortfolio 后进入投影；客户缺分保持 null，覆盖率和平均分由组合合同计算。
 
 投影包含 lead 时，客户端读取 `scoring-criteria` 的平台 hash 并注入请求；用户和 company.json 不维护该字段。平台口径与本地 assessment 不一致时停止上传。
 
