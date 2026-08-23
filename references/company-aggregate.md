@@ -31,6 +31,6 @@ inquiryAssessment、researchQueries、reportFiles、report.md、Sources/sources.
 
 competitorCustomerPortfolio 上传已核实客户数、已评分客户数、覆盖率、客户价值平均分和逐客摘要。逐客分来自其完成的 GETO_LEAD_VALUE cohort assessment；缺分客户保留 null，不进入平均分分母。关系 0–5 切入分保存在 relationships[].entryAssessment。
 
-confirmed competitor 要求 competitorCustomerPortfolio 与 relationships[].customerQualificationStatus=verified_customer 的去重集合完全一致。lead 要求已完成六维 cohort assessment；assessment.evidence 聚合维度 Evidence，capabilityContext 保存本次评分使用的能力上下文。
+执行竞对客户组合分析时，competitorCustomerPortfolio 与 relationships[].customerQualificationStatus=verified_customer 的去重集合保持一致；未执行组合分析时 portfolio 可为 not_requested 或不进入投影。confirmed competitor 的公司级投影不依赖组合完整度。active lead 要求已完成六维 cohort assessment；assessment.evidence 聚合维度 Evidence，capabilityContext 保存本次评分使用的能力上下文。
 
 包含 lead 的投影由客户端读取平台 scoring-criteria hash。company.json 与用户输入不承担 hash 管理。

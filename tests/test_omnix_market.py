@@ -220,7 +220,7 @@ class RequestSafetyTests(unittest.TestCase):
             result, request, output = self.run_request(args("PUT", "/api/market-intelligence/companies/company-1", body))
         self.assertEqual(result, 0)
         self.assertIsNone(request.get_header("If-match"))
-        self.assertEqual(output["uploadStatus"], "uploaded_private")
+        self.assertEqual(output["uploadStatus"], "updated_private")
 
     def test_patch_visibility_reports_public_upload(self) -> None:
         response = FakeResponse(b'{"companyKey":"company-1","visibility":"public","detailRoute":"/market/companies/company-1"}')
@@ -228,7 +228,7 @@ class RequestSafetyTests(unittest.TestCase):
             body = self.write_body(directory, {"visibility": "public"})
             result, _, output = self.run_request(args("PATCH", "/api/market-intelligence/companies/company-1", body), response)
         self.assertEqual(result, 0)
-        self.assertEqual(output["uploadStatus"], "uploaded_public")
+        self.assertEqual(output["uploadStatus"], "updated_public")
         self.assertEqual(output["detailRoute"], "/market/companies/company-1")
 
     def test_delete_and_restore_require_explicit_confirmation(self) -> None:
@@ -360,11 +360,11 @@ class ProjectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "required for upload"):
             CLIENT.project_company(value, "private", None, None, "construction_formwork")
 
-    def test_confirmed_competitor_requires_portfolio(self) -> None:
+    def test_confirmed_competitor_allows_incomplete_portfolio(self) -> None:
         value = self.local_company()
         value["competitorCustomerPortfolio"] = {"status": "not_requested"}
-        with self.assertRaisesRegex(ValueError, "competitorCustomerPortfolio"):
-            CLIENT.project_company(value, "private", None, None, "construction_formwork")
+        projected = CLIENT.project_company(value, "private", None, None, "construction_formwork")
+        self.assertEqual(projected["content"]["researchClassifications"][0]["classification"], "competitor")
 
     def test_lead_waits_for_completed_cohort_assessment(self) -> None:
         value = self.local_company()

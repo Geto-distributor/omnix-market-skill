@@ -55,7 +55,7 @@ python scripts/omnix_market.py request DELETE '/api/market-intelligence/companie
 python scripts/omnix_market.py request POST '/api/market-intelligence/companies/company-key:restore' --body restore.json --confirm-restore
 ```
 
-投影说明见 [upload-example.md](references/upload-example.md)，全字段 JSON 见 [company-aggregate-example.json](references/company-aggregate-example.json)。method、path、请求体与枚举必须通过本次 OpenAPI 校验。
+投影说明见 [upload-example.md](references/upload-example.md)，全字段 JSON 见 [company-aggregate-example.json](references/company-aggregate-example.json)。创建、更新或批量刷新时读取 [delivery-verification.md](references/delivery-verification.md)。method、path、请求体与枚举必须通过本次 OpenAPI 校验。
 
 ## 标准流程
 
@@ -75,7 +75,7 @@ python scripts/omnix_market.py request POST '/api/market-intelligence/companies/
 
 先运行 `prepare-upload`。它按各资源 DTO 显式映射 company.json：marketCode 使用公司 ISO2 countryCode或用户明确给出的 GLOBAL，scopeCode 使用 construction_formwork；保留同一 Company 的 lead 与 competitor 两条 researchClassifications、项目 participants、关系 exclusivity、competitorCustomerPortfolio、assessment.capabilityContext 和内嵌 Evidence。inquiryAssessment、researchQueries、reportFiles、报告与本地路径留在 ResearchBundle。
 
-lead 在同类型 cohort 完成六维评分后进入投影。confirmed competitor 在竞对客户任务生成 competitorCustomerPortfolio 后进入投影；客户缺分保持 null，覆盖率和平均分由组合合同计算。
+lead 在同类型 cohort 完成六维评分后进入 lead 投影。confirmed competitor 独立进入 competitor 投影，不要求同一 Company 的 lead assessment 已完成；竞对客户组合可以是 completed、partial_coverage、pending_customer_scores、no_verified_customers、not_requested 或暂缺，客户缺分保持 null，覆盖率和平均分由组合合同计算。若同一 Company 的 lead 未完成而竞对已 confirmed，客户端只投影竞对切片，不删除本地 ResearchBundle 中的 lead 事实。
 
 投影包含 lead 时，客户端读取 `scoring-criteria` 的平台 hash 并注入请求；用户和 company.json 不维护该字段。平台口径与本地 assessment 不一致时停止上传。
 
@@ -83,7 +83,9 @@ resolve 匹配当前用户已有 Company 时 update；不存在时 create。已�
 
 ### 5. 回读与记录
 
-校验服务端响应，返回 `uploadStatus=uploaded_private|uploaded_public|blocked_public_duplicate|failed`、服务端 Company Key、visibility 和 detailRoute。创建或更新可把 uploadStatus 与 detailRoute 写入 progress.md；平台 Key 不回写 company.json。
+按 delivery-verification 完成本地源、上传投影、详情回读和真实分类列表回读。创建返回 `uploaded_private|uploaded_public`，PUT/PATCH 返回 `updated_private|updated_public`；另可返回 `blocked_public_duplicate|failed`。逐家公司记录 Company Key、visibility、detailRoute、详情与列表成员状态；平台 Key 不回写 company.json。
+
+lead 和 competitor 列表只包含对应 `status=confirmed|possible` 的 active 分类，排除 rejected。详情正确但列表错误时仍属于交付失败；未验证真实列表请求时不宣告可供用户 review。
 
 ## 其他 CRUD
 

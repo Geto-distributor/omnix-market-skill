@@ -346,8 +346,12 @@ def identity_from_company(value: dict[str, Any]) -> dict[str, Any]:
             identity["registrationNumber"] = number
             break
     websites = [item for item in value.get("websites", []) if isinstance(item, dict)]
+    accepted_website_statuses = {
+        "verified", "confirmed", "verified_by_legal_notice", "domain_confirmed",
+        "official_company_disclosure",
+    }
     for item in websites:
-        if item.get("websiteType") != "official" or item.get("verificationStatus") not in {"verified", "confirmed"}:
+        if not str(item.get("websiteType") or "").casefold().startswith("official") or item.get("verificationStatus") not in accepted_website_statuses:
             continue
         url = str(item.get("url") or "").strip()
         parsed = urllib.parse.urlparse(url if "://" in url else f"https://{url}")
@@ -695,8 +699,23 @@ def project_company(value: dict[str, Any], visibility: str, as_of: str | None,
     content = map_content(value)
     if content.get("competitorCustomerPortfolio") is None:
         content.pop("competitorCustomerPortfolio", None)
-    if is_confirmed_competitor(content) and "competitorCustomerPortfolio" not in content:
-        raise ValueError("confirmed competitor upload requires a completed competitorCustomerPortfolio contract")
+    lead_items = [item for item in content.get("researchClassifications", [])
+                  if isinstance(item, dict)
+                  and str(item.get("classification") or "").casefold() == "lead"
+                  and str(item.get("status") or "").casefold() != "rejected"]
+    competitor_items = [item for item in content.get("researchClassifications", [])
+                        if isinstance(item, dict)
+                        and str(item.get("classification") or "").casefold() == "competitor"
+                        and str(item.get("status") or "").casefold() == "confirmed"]
+    assessment = content.get("assessment", {})
+    lead_ready = bool(assessment.get("overallScore") is not None
+                      and assessment.get("grade")
+                      and assessment.get("dimensions"))
+    if competitor_items and lead_items and not lead_ready:
+        content["researchClassifications"] = [item for item in content.get("researchClassifications", [])
+                                               if not (isinstance(item, dict)
+                                                       and str(item.get("classification") or "").casefold() == "lead")]
+        content.pop("assessment", None)
     if is_lead(content):
         assessment = content.get("assessment", {})
         if assessment.get("overallScore") is None or not assessment.get("grade") or not assessment.get("dimensions"):
@@ -867,7 +886,8 @@ def command_request(args: argparse.Namespace) -> int:
         returned_visibility = nested_value(response_body, "visibility") or requested_visibility
         upload_status = None
         if method in {"POST", "PUT", "PATCH"} and template != f"{MARKET_ROOT}/companies:resolve" and not is_restore:
-            upload_status = "uploaded_public" if returned_visibility == "public" else "uploaded_private"
+            action = "uploaded" if is_create else "updated"
+            upload_status = f"{action}_{'public' if returned_visibility == 'public' else 'private'}"
         result = {
             "provider": "omnix-market",
             "providerStatus": "failed" if response_errors else "available",
