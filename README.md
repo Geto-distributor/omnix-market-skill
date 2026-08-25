@@ -1,47 +1,30 @@
-# OmniX Market Agent Skill
+# OmniX Company Aggregate Skill
 
-面向 OmniX Market Agent REST API 的 Agent Skill 与 Python 安全客户端。它依据运行时 OpenAPI 查询市场情报实体、解析 Company/Project 自然键，并创建或更新当前 API Key principal 的私人草稿。
+面向 OmniX 单一无版本 Market Intelligence OpenAPI 的安全客户端。它在 GETO 本地 ResearchBundle 验证完成、且用户明确同意后，解析强身份、生成共享业务投影并创建或更新完整 Company Aggregate。
 
-## 能力
+业务能力包括 Company list/read/resolve/create/update/patch/soft-delete/restore，具体操作面以运行时 OpenAPI 为准。
 
-- 读取 Market reference-data 和已发布市场实体。
-- Company、Project 自然键解析，避免重复主体。
-- 创建、更新和删除当前用户的私人草稿。
-- 写入 Company、Project、Relationship、Assessment、Claim/Source、Contact、Customs 和 Financial 等稳定业务实体。
-- 用户明确要求时提交指定草稿进入人工审核。
+配置：
 
-本仓库不执行市场初始化、最终发布、Approve、Reject、审批队列或 ResearchRun；这些仍由 OmniX Web 治理流程或上层研究编排负责。
-
-## 安装
-
-~~~bash
-git clone https://github.com/Geto-distributor/omnix-market-skill.git ~/.codex/skills/omnix-market
-~~~
-
-也可以将仓库克隆到其他支持 `SKILL.md` 的 Agent 运行时的 Skill 搜索目录。
-
-## 配置
-
-~~~bash
+```bash
 export OMNIX_API_BASE_URL="https://<your-omnix-host>"
 export OMNIX_API_KEY="omx_live_xxx"
-# 可选；默认使用 $OMNIX_API_BASE_URL/swagger/v1/swagger.json
-export OMNIX_OPENAPI_URL="https://<your-omnix-host>/swagger/v1/swagger.json"
-~~~
+```
 
-API Key 必须由 OmniX 部署方签发。不要把真实 Key 写入仓库、Prompt、日志或 ResearchDelta。
+不要把真实 Key 写入仓库、Prompt、日志、company.json、progress.md 或报告。
 
-## 使用
+验证：
 
-~~~bash
-python3 scripts/omnix_market.py --help
-python3 scripts/omnix_market.py capabilities
-python3 scripts/omnix_market.py request GET '/api/market-intelligence/v1/reference-data'
+```bash
 python3 -m unittest discover -s tests -v
-~~~
+python3 scripts/omnix_market.py capabilities
+```
 
-先阅读 [SKILL.md](SKILL.md)。实际 endpoint、method、DTO、枚举和评分版本始终以当前 OmniX OpenAPI 与 reference-data 为准。
+生成上传投影：
 
-## 许可证
+```bash
+python3 scripts/omnix_market.py prepare-upload '<公司目录>/company.json' \
+  --visibility private --output '<临时目录>/upload.json'
+```
 
-Apache-2.0，见 [LICENSE](LICENSE)。
+实际 method、path、DTO 和枚举始终以运行时 OpenAPI 为准。
