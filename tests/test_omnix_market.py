@@ -405,6 +405,51 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotIn("researchQueries", projected["content"])
         self.assertNotIn("reportFiles", projected["content"])
 
+    def test_projection_normalizes_legacy_financial_and_evidence_contracts(self) -> None:
+        value = self.local_company()
+        evidence = value["company"]["evidence"][0]
+        value["company"]["evidence"] = []
+        value["assessment"] = {
+            "status": "completed", "grade": "routine_follow_up", "overallScore": 60,
+            "assessedOn": "2026-08-20", "informationConfirmationRate": 75,
+            "dimensions": [
+                {"dimensionCode": code, "name": code, "finalDimensionScore": score,
+                 "maxScore": maximum, "evidence": [evidence]}
+                for code, score, maximum in (
+                    ("project_city_value", 9, 15), ("account_scale", 12, 20),
+                    ("future_project_demand", 12, 20), ("reachability", 6, 10),
+                    ("payment_capacity", 9, 15), ("multi_product_fit", 12, 20),
+                )
+            ], "evidence": [evidence],
+        }
+        value["researchClassifications"].append(
+            {"classification": "lead", "status": "confirmed", "evidence": [evidence]}
+        )
+        value["missingInformation"] = [{
+            "topic": "local_review", "status": "not_found",
+            "evidence": [{"sourceTitle": "Local review", "sourceUrl": ""}],
+        }]
+        value["competitorCustomerPortfolio"].update({
+            "status": "completed", "verifiedCustomerCount": 2, "scoredCustomerCount": 2,
+            "customerScoreCoverage": 1, "averageCustomerValueScore": 47.1,
+            "customers": [
+                {"companyName": "A", "relationshipCount": 1, "customerAssessmentStatus": "completed",
+                 "customerValueScore": 47.15, "evidence": [evidence]},
+                {"companyName": "B", "relationshipCount": 1, "customerAssessmentStatus": "completed",
+                 "customerValueScore": 47.15, "evidence": [evidence]},
+            ],
+        })
+
+        projected = CLIENT.project_company(value, "public", None, None, "construction_formwork")
+
+        self.assertTrue(projected["content"]["company"]["evidence"])
+        self.assertEqual(
+            [item["name"] for item in projected["content"]["assessment"]["dimensions"]],
+            list(CLIENT.ASSESSMENT_DIMENSION_NAMES.values()),
+        )
+        self.assertEqual(projected["content"]["competitorCustomerPortfolio"]["averageCustomerValueScore"], 47.2)
+        self.assertEqual(projected["content"]["missingInformation"], [])
+
     def test_projection_blocks_unverified_identity(self) -> None:
         value = self.local_company()
         value["websites"][0]["verificationStatus"] = "unverified"

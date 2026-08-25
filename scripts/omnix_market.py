@@ -12,6 +12,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_EVEN
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +42,14 @@ CONTENT_FIELDS = {
 LOCAL_ONLY_FIELDS = {"inquiryAssessment", "researchQueries", "reportFiles"}
 ENTITY_KINDS = {"legal_entity", "operating_company", "corporate_group"}
 SCOPE_CODES = {"construction_formwork"}
+ASSESSMENT_DIMENSION_NAMES = {
+    "project_city_value": "项目与城市价值",
+    "account_scale": "客户规模与行业地位",
+    "future_project_demand": "未来项目与采购需求",
+    "reachability": "决策链与触达可行性",
+    "payment_capacity": "合作与支付能力",
+    "multi_product_fit": "多产品匹配与复制价值",
+}
 
 
 class ClientError(ValueError):
@@ -470,12 +479,41 @@ def evidence_of(item: dict[str, Any]) -> list[dict[str, Any]]:
     )
     return [
         {field: source.get(field) for field in fields if field in source}
-        for source in item.get("evidence", []) if isinstance(source, dict)
+        for source in item.get("evidence", [])
+        if isinstance(source, dict)
+        and str(source.get("sourceTitle") or "").strip()
+        and str(source.get("sourceUrl") or "").strip()
     ]
+
+
+def company_evidence_fallback(value: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for field in (
+        "registrations", "websites", "researchClassifications", "companyRoles",
+        "productsAndServices", "projects",
+    ):
+        for item in value.get(field, []):
+            if isinstance(item, dict):
+                candidates.extend(evidence_of(item))
+    unique: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in candidates:
+        key = (str(item.get("sourceTitle") or ""), str(item.get("sourceUrl") or ""))
+        if key not in seen:
+            seen.add(key)
+            unique.append(item)
+    return unique[:8]
 
 
 def backed(item: dict[str, Any], **fields: Any) -> dict[str, Any]:
     return {**fields, "evidence": evidence_of(item)}
+
+
+def backed_with_fallback(item: dict[str, Any], fallback_evidence: list[dict[str, Any]], **fields: Any) -> dict[str, Any]:
+    mapped = backed(item, **fields)
+    if not mapped["evidence"]:
+        mapped["evidence"] = fallback_evidence
+    return mapped
 
 
 def current_flag(item: dict[str, Any]) -> bool | None:
@@ -489,8 +527,8 @@ def current_flag(item: dict[str, Any]) -> bool | None:
     return None
 
 
-def map_company_core(item: dict[str, Any]) -> dict[str, Any]:
-    return backed(item,
+def map_company_core(item: dict[str, Any], fallback_evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    return backed_with_fallback(item, fallback_evidence,
         companyName=item.get("companyName", ""), entityType=item.get("entityType", "operating_company"),
         country=item.get("country", ""), status=item.get("status", "unknown"), summary=item.get("summary"),
         researchConclusion=item.get("researchConclusion"), foundedOn=item.get("foundedOn"),
@@ -533,19 +571,20 @@ def map_address(item: dict[str, Any]) -> dict[str, Any]:
                   postalCode=item.get("postalCode"), current=current_flag(item))
 
 
-def map_media(item: dict[str, Any]) -> dict[str, Any]:
-    return backed(item, url=item.get("url", ""), mediaType=item.get("mediaType", "image"),
+def map_media(item: dict[str, Any], fallback_evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    return backed_with_fallback(item, fallback_evidence, url=item.get("url", ""), mediaType=item.get("mediaType", "image"),
                   caption=item.get("caption"), lastVerifiedOn=item.get("lastVerifiedOn"))
 
 
 def map_product(item: dict[str, Any]) -> dict[str, Any]:
+    parent_evidence = evidence_of(item)
     return backed(item, name=item.get("name", ""), systemName=item.get("systemName"), type=item.get("type", "product"),
                   category=item.get("category"), description=item.get("description"),
                   technologyTerms=item.get("technologyTerms", []), applications=item.get("applications", []),
                   targetCustomers=item.get("targetCustomers", []), markets=item.get("markets", []),
                   commercialRoles=item.get("commercialRoles", []), manufacturingStatus=item.get("manufacturingStatus", "unknown"),
                   manufacturingDescription=item.get("manufacturingDescription"), factoryLocations=item.get("factoryLocations", []),
-                  media=[map_media(child) for child in item.get("media", []) if isinstance(child, dict)],
+                  media=[map_media(child, parent_evidence) for child in item.get("media", []) if isinstance(child, dict)],
                   representativeProject=item.get("representativeProject"), status=item.get("status", "claimed"),
                   getoRelevance=item.get("getoRelevance", "unknown"))
 
@@ -556,16 +595,17 @@ def map_identity(item: Any) -> dict[str, Any] | None:
     return {name: item.get(name) for name in ("jurisdiction", "registrationNumber", "primaryDomain", "otherLegalId")}
 
 
-def map_participant(item: dict[str, Any]) -> dict[str, Any]:
-    return backed(item, name=item.get("name", ""), role=item.get("role", ""), identity=map_identity(item.get("identity")),
+def map_participant(item: dict[str, Any], fallback_evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    return backed_with_fallback(item, fallback_evidence, name=item.get("name", ""), role=item.get("role", ""), identity=map_identity(item.get("identity")),
                   status=item.get("status", "possible"), lastVerifiedOn=item.get("lastVerifiedOn"))
 
 
-def map_potential_product(item: dict[str, Any]) -> dict[str, Any]:
-    return backed(item, productName=item.get("productName", ""), usageSummary=item.get("usageSummary"))
+def map_potential_product(item: dict[str, Any], fallback_evidence: list[dict[str, Any]]) -> dict[str, Any]:
+    return backed_with_fallback(item, fallback_evidence, productName=item.get("productName", ""), usageSummary=item.get("usageSummary"))
 
 
 def map_project(item: dict[str, Any]) -> dict[str, Any]:
+    parent_evidence = evidence_of(item)
     history = item.get("currentOrHistorical")
     kind = item.get("projectKind") or ("historical_case" if history == "historical" else "opportunity" if history in {"current", "future"} else "unknown")
     scale = item.get("scale") if isinstance(item.get("scale"), dict) else {
@@ -579,9 +619,9 @@ def map_project(item: dict[str, Any]) -> dict[str, Any]:
                   startOn=first(item, "startOn", "startedOn"), expectedCompletionOn=item.get("expectedCompletionOn"),
                   completedOn=first(item, "completedOn", "endedOn"), scale=scale,
                   companyRole=first(item, "companyRole", "targetCompanyRole"),
-                  participants=[map_participant(child) for child in item.get("participants", []) if isinstance(child, dict)],
+                  participants=[map_participant(child, parent_evidence) for child in item.get("participants", []) if isinstance(child, dict)],
                   productsOrTechnologies=item.get("productsOrTechnologies", []),
-                  potentialProducts=[map_potential_product(child) for child in item.get("potentialProducts", []) if isinstance(child, dict)],
+                  potentialProducts=[map_potential_product(child, parent_evidence) for child in item.get("potentialProducts", []) if isinstance(child, dict)],
                   demandJudgement=item.get("demandJudgement"), entryWindow=item.get("entryWindow"),
                   opportunity=first(item, "opportunity", "getoOpportunity"), procurementBoundary=item.get("procurementBoundary"),
                   knownRelationship=item.get("knownRelationship"), getoRelevance=item.get("getoRelevance"),
@@ -589,24 +629,25 @@ def map_project(item: dict[str, Any]) -> dict[str, Any]:
                   lastVerifiedOn=item.get("lastVerifiedOn"), importantNotes=first(item, "importantNotes", "description"))
 
 
-def map_exclusivity(item: Any) -> dict[str, Any]:
+def map_exclusivity(item: Any, fallback_evidence: list[dict[str, Any]]) -> dict[str, Any]:
     value = item if isinstance(item, dict) else {"status": "unknown", "evidence": []}
-    return backed(value, status=value.get("status", "unknown"), scope=value.get("scope"),
+    return backed_with_fallback(value, fallback_evidence, status=value.get("status", "unknown"), scope=value.get("scope"),
                   description=value.get("description"), lastVerifiedOn=value.get("lastVerifiedOn"))
 
 
-def map_compact_assessment(item: Any, entry: bool = False) -> dict[str, Any] | None:
+def map_compact_assessment(item: Any, fallback_evidence: list[dict[str, Any]], entry: bool = False) -> dict[str, Any] | None:
     if not isinstance(item, dict):
         return None
     fields = {"score": item.get("score"), "maxScore": item.get("maxScore", 5),
               "rationale": item.get("rationale"), "assessedOn": item.get("assessedOn")} if entry else {
         "overallScore": item.get("overallScore"), "grade": item.get("grade"), "assessedOn": item.get("assessedOn")
     }
-    return backed(item, **fields)
+    return backed_with_fallback(item, fallback_evidence, **fields)
 
 
 def map_relationship(item: dict[str, Any]) -> dict[str, Any]:
     qualification = first(item, "customerQualificationStatus", "reviewDecision", default="pending")
+    parent_evidence = evidence_of(item)
     return backed(item, relatedPartyName=first(item, "relatedPartyName", "counterpartyName", default=""),
                   relatedPartyIdentity=map_identity(item.get("relatedPartyIdentity")),
                   relatedPartyType=first(item, "relatedPartyType", default="company"),
@@ -616,10 +657,10 @@ def map_relationship(item: dict[str, Any]) -> dict[str, Any]:
                   cooperationMode=first(item, "cooperationMode", "cooperationModeCode"),
                   cooperationDepth=first(item, "cooperationDepth", "cooperationDepthCode"),
                   customerQualificationStatus=qualification, buyer=item.get("buyer"), actualUser=item.get("actualUser"),
-                  customerValueAssessment=map_compact_assessment(item.get("customerValueAssessment")),
-                  entryAssessment=map_compact_assessment(item.get("entryAssessment"), entry=True),
+                  customerValueAssessment=map_compact_assessment(item.get("customerValueAssessment"), parent_evidence),
+                  entryAssessment=map_compact_assessment(item.get("entryAssessment"), parent_evidence, entry=True),
                   entryPoint=item.get("entryPoint"), limitations=item.get("limitations", []),
-                  exclusivity=map_exclusivity(item.get("exclusivity")), status=item.get("status", "possible"),
+                  exclusivity=map_exclusivity(item.get("exclusivity"), parent_evidence), status=item.get("status", "possible"),
                   startedOn=item.get("startedOn"), endedOn=item.get("endedOn"), lastVerifiedOn=item.get("lastVerifiedOn"))
 
 
@@ -636,7 +677,9 @@ def map_assessment(item: Any) -> dict[str, Any]:
     value = item if isinstance(item, dict) else {}
     completed = value.get("status") == "completed"
     dimensions = [] if not completed else [
-        backed(child, name=child.get("name", ""), score=first(child, "score", "finalDimensionScore"),
+        backed(child, name=ASSESSMENT_DIMENSION_NAMES.get(
+            str(first(child, "dimensionCode", "name", default="")), child.get("name", "")
+        ), score=first(child, "score", "finalDimensionScore"),
                maxScore=child.get("maxScore"), level=child.get("level"), rationale=child.get("rationale"))
         for child in value.get("dimensions", []) if isinstance(child, dict)
     ]
@@ -660,19 +703,34 @@ def map_portfolio(item: Any) -> dict[str, Any] | None:
                         customerValueModelVersion=child.get("customerValueModelVersion"),
                         cohortBaselineVersion=child.get("cohortBaselineVersion"), assessedOn=child.get("assessedOn"))
                  for child in item.get("customers", []) if isinstance(child, dict)]
+    scored = [
+        customer for customer in customers
+        if customer.get("customerAssessmentStatus") == "completed" and customer.get("customerValueScore") is not None
+    ]
+    verified_count = len(customers)
+    scored_count = len(scored)
+    coverage = Decimal(scored_count) / Decimal(verified_count) if verified_count else Decimal(0)
+    average = None if not scored else (
+        sum(Decimal(str(customer["customerValueScore"])) for customer in scored) / Decimal(scored_count)
+    ).quantize(Decimal("0.1"), rounding=ROUND_HALF_EVEN)
+    status = "no_verified_customers" if verified_count == 0 else (
+        "pending_customer_scores" if scored_count == 0 else
+        "partial_coverage" if scored_count < verified_count else "completed"
+    )
     return {
-        "assessmentType": item.get("assessmentType"), "status": item.get("status"), "modelCode": item.get("modelCode"),
+        "assessmentType": item.get("assessmentType"), "status": status, "modelCode": item.get("modelCode"),
         "modelVersion": item.get("modelVersion"), "customerValueModelCode": item.get("customerValueModelCode"),
-        "asOf": item.get("asOf"), "verifiedCustomerCount": item.get("verifiedCustomerCount", 0),
-        "scoredCustomerCount": item.get("scoredCustomerCount", 0), "customerScoreCoverage": item.get("customerScoreCoverage", 0),
-        "averageCustomerValueScore": item.get("averageCustomerValueScore"), "customers": customers,
+        "asOf": item.get("asOf"), "verifiedCustomerCount": verified_count,
+        "scoredCustomerCount": scored_count, "customerScoreCoverage": float(coverage.quantize(Decimal("0.0001"))),
+        "averageCustomerValueScore": float(average) if average is not None else None, "customers": customers,
     }
 
 
 def map_content(value: dict[str, Any]) -> dict[str, Any]:
     company = value.get("company") if isinstance(value.get("company"), dict) else {}
+    core_fallback = company_evidence_fallback(value)
     content = {
-        "company": map_company_core(company),
+        "company": map_company_core(company, core_fallback),
         "aliases": [map_alias(item) for item in value.get("aliases", []) if isinstance(item, dict)],
         "registrations": [map_registration(item) for item in value.get("registrations", []) if isinstance(item, dict)],
         "capitalRecords": [map_capital(item) for item in value.get("capitalRecords", []) if isinstance(item, dict)],
@@ -769,6 +827,11 @@ def project_company(value: dict[str, Any], visibility: str, as_of: str | None,
     if unexpected:
         raise ValueError("company.json has unsupported top-level fields: " + ", ".join(unexpected))
     content = map_content(value)
+    if visibility == "public":
+        content["missingInformation"] = [
+            item for item in content.get("missingInformation", [])
+            if item.get("status") == "not_queried" or item.get("evidence")
+        ]
     if content.get("competitorCustomerPortfolio") is None:
         content.pop("competitorCustomerPortfolio", None)
     lead_items = [item for item in content.get("researchClassifications", [])
