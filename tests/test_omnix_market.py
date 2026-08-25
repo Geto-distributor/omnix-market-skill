@@ -178,6 +178,45 @@ class OpenApiContractTests(unittest.TestCase):
         self.assertTrue(any("identity" in error or "content" in error for error in errors))
         self.assertTrue(any("unexpected" in error for error in errors))
 
+    def test_runtime_date_only_and_jtoken_wire_values_are_supported(self) -> None:
+        spec = {
+            "components": {"schemas": {
+                "DateOnly": {"type": "object", "properties": {
+                    "year": {"type": "integer"}, "month": {"type": "integer"}, "day": {"type": "integer"},
+                }},
+                "Newtonsoft.Json.Linq.JToken": {"type": "object"},
+            }}
+        }
+        date_schema = {"$ref": "#/components/schemas/DateOnly"}
+        token_schema = {"$ref": "#/components/schemas/Newtonsoft.Json.Linq.JToken"}
+
+        self.assertEqual(CLIENT.validate_json_schema("2026-08-25", date_schema, spec), [])
+        self.assertTrue(CLIENT.validate_json_schema("25/08/2026", date_schema, spec))
+        self.assertEqual(CLIENT.validate_json_schema({"nested": [1, 2]}, token_schema, spec), [])
+
+    def test_openapi_coercion_preserves_wire_contract_and_removes_optional_nulls(self) -> None:
+        spec = {"components": {"schemas": {"DateOnly": {
+            "type": "object", "properties": {
+                "year": {"type": "integer"}, "month": {"type": "integer"}, "day": {"type": "integer"},
+            },
+        }}}}
+        schema = {"type": "object", "properties": {
+            "asOf": {"$ref": "#/components/schemas/DateOnly"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+            "value": {"type": "number"},
+            "requiredNull": {"type": "string"},
+            "optional": {"type": "string"},
+        }, "required": ["requiredNull"]}
+
+        coerced = CLIENT.coerce_openapi_value({
+            "asOf": "2026-08-25", "tags": "audited", "value": "12.5",
+            "requiredNull": None, "optional": None,
+        }, schema, spec)
+
+        self.assertEqual(coerced, {
+            "asOf": "2026-08-25", "tags": ["audited"], "value": 12.5, "requiredNull": None,
+        })
+
     def test_openapi_fixture_matches_the_company_surface(self) -> None:
         self.assertEqual(set(SPEC["paths"]), {path for _, path in CLIENT.ALLOWED_OPERATIONS})
         self.assertEqual(CLIENT.aggregate_contract_gaps(SPEC), [])

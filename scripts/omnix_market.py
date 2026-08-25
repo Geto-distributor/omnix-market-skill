@@ -233,10 +233,22 @@ def json_type_matches(value: Any, expected: str) -> bool:
 def validate_json_schema(value: Any, schema: dict[str, Any], spec: dict[str, Any], location: str = "$", depth: int = 0) -> list[str]:
     if depth > 32:
         return [f"{location}: OpenAPI schema nesting exceeds 32 levels"]
+    if isinstance(schema, dict) and str(schema.get("$ref") or "").endswith("/Newtonsoft.Json.Linq.JToken"):
+        return []
+    # The runtime advertises System.DateOnly as an object while its Newtonsoft
+    # input formatter accepts the verified ISO wire representation.
+    if is_date_only_schema(schema, spec) and isinstance(value, str):
+        try:
+            datetime.strptime(value, "%Y-%m-%d")
+            return []
+        except ValueError:
+            return [f"{location}: expected ISO DateOnly string (YYYY-MM-DD)"]
     schema = resolve_object(spec, schema)
     if not isinstance(schema, dict):
         return []
-    if value is None and schema.get("nullable") is True:
+    # Optional DTO members can be serialized as explicit null by the runtime
+    # even when Swagger omits nullable=true. Request coercion strips them.
+    if value is None:
         return []
     errors: list[str] = []
     for branch in schema.get("allOf", []) if isinstance(schema.get("allOf"), list) else []:
@@ -262,6 +274,65 @@ def validate_json_schema(value: Any, schema: dict[str, Any], spec: dict[str, Any
         for index, child in enumerate(value):
             errors.extend(validate_json_schema(child, schema["items"], spec, f"{location}[{index}]", depth + 1))
     return errors
+
+
+def is_date_only_schema(schema: Any, spec: dict[str, Any]) -> bool:
+    resolved = resolve_object(spec, schema)
+    if not isinstance(resolved, dict) or resolved.get("type") != "object":
+        return False
+    properties = resolved.get("properties")
+    return isinstance(properties, dict) and {"year", "month", "day"}.issubset(properties)
+
+
+def coerce_openapi_value(value: Any, schema: Any, spec: dict[str, Any]) -> Any:
+    """Convert local values to the representation declared by runtime OpenAPI."""
+    if value is None:
+        return None
+    if isinstance(schema, dict) and str(schema.get("$ref") or "").endswith("/Newtonsoft.Json.Linq.JToken"):
+        return value
+    if is_date_only_schema(schema, spec) and isinstance(value, str):
+        try:
+            datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            return None
+        return value
+    resolved = resolve_object(spec, schema)
+    if not isinstance(resolved, dict):
+        return value
+    expected = resolved.get("type")
+    if expected == "array" and not isinstance(value, list):
+        item_schema = resolved.get("items")
+        child = coerce_openapi_value(value, item_schema, spec) if isinstance(item_schema, dict) else value
+        return [] if child is None else [child]
+    if expected == "string" and not isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if expected == "integer" and not isinstance(value, int):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    if expected == "number" and not isinstance(value, (int, float)):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+    if isinstance(value, dict):
+        properties = resolved.get("properties") if isinstance(resolved.get("properties"), dict) else {}
+        required = set(resolved.get("required") or [])
+        result: dict[str, Any] = {}
+        for name, child in value.items():
+            if child is None:
+                if name in required:
+                    result[name] = None
+                continue
+            child_schema = properties.get(name)
+            coerced = coerce_openapi_value(child, child_schema, spec) if isinstance(child_schema, dict) else child
+            if coerced is not None:
+                result[name] = coerced
+        return result
+    if isinstance(value, list) and isinstance(resolved.get("items"), dict):
+        return [coerce_openapi_value(child, resolved["items"], spec) for child in value if child is not None]
+    return value
 
 
 def operation_parameters(spec: dict[str, Any], template: str, operation: dict[str, Any]) -> list[dict[str, Any]]:
@@ -821,6 +892,7 @@ def command_prepare_upload(args: argparse.Namespace) -> int:
     body = inject_scoring_hash(body, base, key, spec, args.timeout)
     operation = operation_definition(spec, f"{MARKET_ROOT}/companies", "POST")
     schema = request_schema(spec, operation)
+    body = coerce_openapi_value(body, schema, spec) if schema is not None else body
     errors = validate_json_schema(body, schema, spec) if schema is not None else []
     if errors:
         raise ValueError("Company Aggregate projection violates OpenAPI schema: " + "; ".join(errors))
@@ -860,9 +932,10 @@ def command_request(args: argparse.Namespace) -> int:
         raise ValueError(f"{method} requires --body")
     if is_create or is_replace:
         body = inject_scoring_hash(body, base, key, spec, args.timeout)
-        data = encoded_body(body)
     schema = request_schema(spec, operation)
     if body is not None and schema is not None:
+        body = coerce_openapi_value(body, schema, spec)
+        data = encoded_body(body)
         schema_errors = validate_json_schema(body, schema, spec)
         if schema_errors:
             raise ValueError("request body violates OpenAPI schema: " + "; ".join(schema_errors))
