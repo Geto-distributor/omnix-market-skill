@@ -311,6 +311,14 @@ class ProjectionTests(unittest.TestCase):
                     "lastVerifiedOn": None, "evidence": [],
                 }, "evidence": [evidence],
             }],
+            "financialRecords": [{
+                "recordType": "total_assets", "subjectEntity": "Example Legal Pty Ltd.",
+                "financialScope": "target_entity", "scope": "standalone",
+                "accountingScope": "standalone", "relationshipToTarget": "target_entity",
+                "period": "FY2025", "value": 125000000, "currency": "AUD",
+                "unit": "currency_units", "valueStatus": "reported",
+                "description": "Audited standalone total assets.", "evidence": [evidence],
+            }],
             "researchClassifications": [{"classification": "competitor", "status": "confirmed", "evidence": [evidence]}],
             "assessment": {"status": "not_requested", "capabilityContext": {
                 "foundationKey": "geto:capability-foundation", "foundationVersion": "2026-08-19",
@@ -348,6 +356,12 @@ class ProjectionTests(unittest.TestCase):
         self.assertNotIn("legalName", projected["content"]["registrations"][0])
         self.assertEqual(projected["content"]["relationships"][0]["relatedPartyName"], "Example Customer")
         self.assertEqual(projected["content"]["relationships"][0]["customerQualificationStatus"], "pending")
+        financial = projected["content"]["financialRecords"][0]
+        self.assertEqual(financial["subjectEntity"], "Example Legal Pty Ltd.")
+        self.assertEqual(financial["financialScope"], "target_entity")
+        self.assertEqual(financial["scope"], "standalone")
+        self.assertEqual(financial["accountingScope"], "standalone")
+        self.assertEqual(financial["relationshipToTarget"], "target_entity")
         self.assertNotIn("inquiryAssessment", projected["content"])
         self.assertNotIn("researchQueries", projected["content"])
         self.assertNotIn("reportFiles", projected["content"])

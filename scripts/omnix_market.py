@@ -627,7 +627,8 @@ def map_content(value: dict[str, Any]) -> dict[str, Any]:
             "workEmail", "workPhone", "linkedinUrl", "otherProfileUrl", "verificationStatus", "lastVerifiedOn")})
             for item in value.get("contacts", []) if isinstance(item, dict)],
         "financialRecords": [backed(item, **{key: item.get(key) for key in (
-            "recordType", "period", "value", "currency", "unit", "valueStatus", "description")})
+            "recordType", "subjectEntity", "financialScope", "scope", "accountingScope",
+            "relationshipToTarget", "period", "value", "currency", "unit", "valueStatus", "description")})
             for item in value.get("financialRecords", []) if isinstance(item, dict)],
         "assessment": map_assessment(value.get("assessment")), "competitorCustomerPortfolio": map_portfolio(value.get("competitorCustomerPortfolio")),
         "researchStatus": value.get("researchStatus"), "lastResearchedOn": value.get("lastResearchedOn"),
