@@ -1,4 +1,4 @@
 interface:
-  display_name: "OmniX Market Agent REST"
-  short_description: "依据 OpenAPI 查询市场实体并安全写入私人草稿、提交人工审批。"
-  default_prompt: "使用 $omnix-market 查询或写入 OmniX Market 私人草稿。"
+  display_name: "OmniX Company Aggregate"
+  short_description: "按无版本 OpenAPI 可选上传和管理完整 Company Aggregate。"
+  default_prompt: "使用 $omnix-market 在本地验证通过后上传或更新完整 Company Aggregate。"

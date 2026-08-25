@@ -1,80 +1,97 @@
 ---
 name: omnix-market
-description: 通过 OmniX Agent REST API 查询市场情报实体、解析自然键，并创建或更新当前用户私有的 Market drafts；依据实时 OpenAPI 和 reference-data 校验路径、请求体、枚举、幂等键和 ETag，并可在用户明确要求时提交人工审核。用于 GETO Skills 的 Company、Role、Project、Product、Relationship、Assessment、Claim/Source、Contact、Customs 和 Financial 交付；不执行市场初始化/发布或 Approve/Reject。
+description: 通过 OmniX Market Intelligence OpenAPI 解析强身份，并可选创建、读取、更新、切换可见性、软删除或恢复完整 Company Aggregate。用于本地 GETO ResearchBundle 验证完成后由用户明确选择上传 private/public，或管理当前用户有权操作的 Company。
 ---
 
-# OmniX Market Agent REST
+# OmniX Company Aggregate 客户端
 
 ## 作用与安全边界
 
-这是 OmniX Market 的薄客户端 Skill。OpenAPI 是唯一接口合同；每次调用前先读取服务端 OpenAPI，不猜路径、参数、operation 或 DTO。
+OmniX 是可选上传、持久化、展示和平台内共享手段，不是研究完成条件。OpenAPI 是唯一接口合同；不猜路径、DTO、枚举或 operation。
+
+在任何上传前先询问用户：
+
+1. 是否上传或更新 OmniX；
+2. Base URL 与 API Key 是否已通过本地环境安全配置；
+3. 使用 `private` 还是 `public`。
 
 配置：
 
-- `OMNIX_API_BASE_URL`：OmniX API 根地址。
-- `OMNIX_API_KEY`：当前用户的 `omx_test_*` 或 `omx_live_*` Key，只从本地环境读取。
-- 可选 `OMNIX_OPENAPI_URL`：未设置时使用 `${OMNIX_API_BASE_URL}/swagger/v1/swagger.json`。
+- `OMNIX_API_BASE_URL`
+- `OMNIX_API_KEY`，只从本地环境读取
+- 可选 `OMNIX_OPENAPI_URL`，缺省 `${OMNIX_API_BASE_URL}/swagger/v1/swagger.json`
 
-不得输出、持久化或转发 Key 到 OmniX 以外的目标。不要把 Key 写入 ResearchDelta、日志或工作文件。
+Key 不得进入 company.json、progress.md、报告、日志、来源或命令输出。
 
-## 调用工具
+## 允许的 API
 
-使用 `scripts/omnix_market.py`：
+当前 Company Aggregate 操作面：
 
-~~~bash
+```text
+GET    /api/market-intelligence/companies
+GET    /api/market-intelligence/companies/{companyKey}
+GET    /api/market-intelligence/scoring-criteria
+POST   /api/market-intelligence/companies:resolve
+POST   /api/market-intelligence/companies
+PUT    /api/market-intelligence/companies/{companyKey}
+PATCH  /api/market-intelligence/companies/{companyKey}
+DELETE /api/market-intelligence/companies/{companyKey}
+POST   /api/market-intelligence/companies/{companyKey}:restore
+```
+
+客户端只执行上表中同时出现在运行时 OpenAPI 的操作。
+
+## 调用
+
+```bash
 python scripts/omnix_market.py capabilities
-python scripts/omnix_market.py request GET '/api/market-intelligence/v1/reference-data'
-python scripts/omnix_market.py request POST '/api/market-intelligence/v1/markets/AU/companies:resolve?scopeCode=construction_formwork' --body company-identity.json
-python scripts/omnix_market.py request GET '/api/market-intelligence/v1/markets/AU/companies/company-key?scopeCode=construction_formwork'
-python scripts/omnix_market.py request POST '/api/market-intelligence/v1/markets/AU/drafts/companies?scopeCode=construction_formwork' --body company.json --idempotency-key stable-key
-python scripts/omnix_market.py request PUT '/api/market-intelligence/v1/markets/AU/drafts/companies/company-key?scopeCode=construction_formwork' --body company.json --if-match 'server-etag'
-~~~
+python scripts/omnix_market.py prepare-upload '<公司目录>/company.json' \
+  --visibility private --output '<临时目录>/upload.json'
+python scripts/omnix_market.py request POST '/api/market-intelligence/companies:resolve' --body identity.json
+python scripts/omnix_market.py request POST '/api/market-intelligence/companies' --body upload.json --idempotency-key stable-key
+python scripts/omnix_market.py request PUT '/api/market-intelligence/companies/company-key' --body upload.json
+python scripts/omnix_market.py request PATCH '/api/market-intelligence/companies/company-key' --body visibility.json
+python scripts/omnix_market.py request DELETE '/api/market-intelligence/companies/company-key' --confirm-delete
+python scripts/omnix_market.py request POST '/api/market-intelligence/companies/company-key:restore' --body restore.json --confirm-restore
+```
 
-脚本只允许 OpenAPI 中实际存在的 Market 读取和 draft 操作；审批路径和 `:approve`/`:reject` 永久拒绝。DELETE 需要 `--confirm-delete`，submit 需要 `--confirm-submit`。
+投影说明见 [upload-example.md](references/upload-example.md)，全字段 JSON 见 [company-aggregate-example.json](references/company-aggregate-example.json)。创建、更新或批量刷新时读取 [delivery-verification.md](references/delivery-verification.md)。method、path、请求体与枚举必须通过本次 OpenAPI 校验。
 
 ## 标准流程
 
-### 1. capability check
+### 1. 本地门禁
 
-运行 `capabilities`，再读取 `reference-data` 获取产品、当前评分模型/维度、角色、关系类型和服务端能力。OpenAPI 不可访问、接口未发布或本地 Key 未配置时，返回明确 provider status，不要回退为猜测调用。
+确认国家 `progress.md`、公司 `company.json`、`report.md` 和 `Sources/sources.md` 已通过本地验证。ERROR 阻止上传；WARNING 必须显式保留。本地 ResearchBundle 是事实主合同，Company Aggregate 是其中可共享业务字段的投影。
 
-真正的新国家若返回 `MARKET_SCOPE_NOT_FOUND`，停止写入并报告 `initialization_required`。市场初始化和最终发布只允许 Web session，API Key Skill 不代替管理员执行。
+### 2. Capability check
 
-### 2. resolve-before-upsert
+运行 `capabilities`。操作面完整时继续；否则返回 `partial|upstream_unavailable` 和缺失操作。
 
-Company/Project 先调用各自的 `:resolve`，再用 read endpoints 查询：
+### 3. 强身份 resolve
 
-- Company 名称、别名、官网域名、法定主体与多角色。
-- Project/Opportunity 的名称、地点、参与公司和时间窗口。
-- Relationship、Product、Assessment、Claim、Source 与子资源。
+按法定注册号、已确认稳定官网域名等强锚点调用 `companies:resolve`。legal_entity、operating_company、corporate_group 分别解析。private 与 public 都要求强身份；ambiguous/identity conflict 时停止写入。researchClassifications.status=possible 只表达业务分类状态。
 
-`matched` 时 update/link，`not_found` 时采用服务端 `suggestedResourceKey` 创建，`ambiguous` 时保存 identity conflict 并停止该主体写入，不创建重复 Company/Project。
+### 4. 创建或更新完整聚合
 
-### 3. 构造 draft
+先运行 `prepare-upload`。它按各资源 DTO 显式映射 company.json：marketCode 使用公司 ISO2 countryCode或用户明确给出的 GLOBAL，scopeCode 使用 construction_formwork；保留同一 Company 的 lead 与 competitor 两条 researchClassifications、项目 participants、关系 exclusivity、competitorCustomerPortfolio、assessment.capabilityContext 和内嵌 Evidence。inquiryAssessment、researchQueries、reportFiles、报告与本地路径留在 ResearchBundle。
 
-读取 OpenAPI 中对应 request schema，逐字段映射 ResearchDelta。先保存 Company，再保存 Project、Relationship、Assessment 和证据子资源。禁止丢弃 API 尚未消费的稳定领域字段；可将其保留在 ResearchDelta gaps/pending payload 中等待合同支持，但不能塞入任意长文本冒充结构化写入。
+lead 在同类型 cohort 完成六维评分后进入 lead 投影。confirmed competitor 独立进入 competitor 投影，不要求同一 Company 的 lead assessment 已完成；竞对客户组合可以是 completed、partial_coverage、pending_customer_scores、no_verified_customers、not_requested 或暂缺，客户缺分保持 null，覆盖率和平均分由组合合同计算。若同一 Company 的 lead 未完成而竞对已 confirmed，客户端只投影竞对切片，不删除本地 ResearchBundle 中的 lead 事实。
 
-POST create 必须使用可重算的 `Idempotency-Key`。PUT/DELETE 必须先读取 owner draft 的 ETag，再使用 `If-Match`；遇 412/428 重新读取并合并，不盲重试。
+投影包含 lead 时，客户端读取 `scoring-criteria` 的平台 hash 并注入请求；用户和 company.json 不维护该字段。平台口径与本地 assessment 不一致时停止上传。
 
-### 4. 校验服务端响应
+resolve 匹配当前用户已有 Company 时 update；不存在时 create。已存在其他用户 public 强身份时返回 `blocked_public_duplicate`，由用户决定后续处理。聚合根整体包含项目、联系人、关系和 Evidence。
 
-保存 draftKey、resourceKey、schemaCode、validationStatus、warnings、contentHash、ETag 和 detail URL。服务端 409/412/422/428 属业务冲突，必须回到 resolve/validation，不改写成成功。
+### 5. 回读与记录
 
-### 5. 提交审核
+按 delivery-verification 完成本地源、上传投影、详情回读和真实分类列表回读。创建返回 `uploaded_private|uploaded_public`，PUT/PATCH 返回 `updated_private|updated_public`；另可返回 `blocked_public_duplicate|failed`。逐家公司记录 Company Key、visibility、detailRoute、详情与列表成员状态；平台 Key 不回写 company.json。
 
-默认只创建/更新私人草稿。仅当用户明确表达“提交审核”时，使用 OpenAPI 中的 draft submit operation，并传精确 draftKeys；submit 不是发布。
+lead 和 competitor 列表只包含对应 `status=confirmed|possible` 的 active 分类，排除 rejected。详情正确但列表错误时仍属于交付失败；未验证真实列表请求时不宣告可供用户 review。
 
-Approve、Reject、审批队列和审核详情属于 Web UI，会被本 Skill 与脚本拒绝。
+## 其他 CRUD
 
-## 领域映射
+- private/public 是普通 PATCH/PUT 更新；public 表示认证且有 Market 读取权限的用户可见，不是匿名互联网公开。
+- DELETE 是软删除，必须有用户明确意图并使用 `--confirm-delete`；结果只在当前任务回传。
+- restore 必须有用户明确意图并使用 `--confirm-restore`；服务端重新检查 public 强身份唯一性，结果只在当前任务回传。
+- 普通用户只操作自己拥有的数据；Admin 能力由服务端 principal 决定，客户端不传 ownerUserId。
 
-读取 [country-onboarding.md](references/country-onboarding.md) 编排完整新国家流程，读取 [domain-mapping.md](references/domain-mapping.md) 处理模块对象，读取 [lead-value-scoring.md](references/lead-value-scoring.md) 写入当前 GETO 六维客户价值评分，读取 [error-contract.md](references/error-contract.md) 处理状态和恢复。
-
-## 不变量
-
-- 所有草稿归属由服务端当前 API Key principal 决定，客户端不得传 owner。
-- 不使用数据库 ID、SQL patch 或 Excel 行号作为自然键。
-- Claim/Source/ClaimSourceLink 保持可追溯；observed Claim 至少有一个 supports Source。
-- 先保存 parent，再保存 child/link；批次提交必须属于同一可审核 subject。
-- 不创建或写入 ResearchRun；研究检查点留在上层 GETO 编排合同中。
-- 不调用未出现在当前 OpenAPI 的接口。
+详细映射见 [company-aggregate.md](references/company-aggregate.md)，错误处理见 [error-contract.md](references/error-contract.md)。
